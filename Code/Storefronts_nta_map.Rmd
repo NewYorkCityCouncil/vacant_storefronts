@@ -26,16 +26,38 @@ library(leaflet)
 library(tibble)
 library(htmltools)
 library(leaflet.extras)
+library(RSocrata)
 
-leased_not_leased_2021 <- read.csv("/Users/nycc/Downloads/Storefronts_Reported_Vacant_or_Not__Filing_Year_2020_-_2021_.csv") %>% clean_names()
+# leased_not_leased_2021 <- read.csv("/Users/nycc/Downloads/Storefronts_Reported_Vacant_or_Not__Filing_Year_2020_-_2021_.csv") %>% clean_names()
+# 
+#  Census tract shape file
+# nta.shp <- st_read("/Users/nycc/Downloads/2010_nta/geo_export_f3c429f1-cc95-49e4-a3a8-51efff65c68f.shp")
+# nta.shp <- st_transform(nta.shp,'+proj=longlat +datum=WGS84')
+
+# read all files below via api, dont have the files locally
+leased_not_leased_2021 <- read.csv("https://data.cityofnewyork.us/resource/92iy-9c3n.csv?$limit=999999999") %>% clean_names()
 
 # Census tract shape file
-nta.shp <- st_read("/Users/nycc/Downloads/2010_nta/geo_export_f3c429f1-cc95-49e4-a3a8-51efff65c68f.shp")
-nta.shp <- st_transform(nta.shp,'+proj=longlat +datum=WGS84')
+nta.shp <- st_read("https://data.cityofnewyork.us/api/geospatial/cpf4-rkhq?method=export&format=GeoJSON") %>%  st_transform('+proj=longlat +datum=WGS84')
 
-vacant_nta <- leased_not_leased_2021 %>% group_by(nta, vacant_on_12_31) %>% summarize(count=n()) %>% mutate(vacant_2021=round(count/sum(count)*100,2)) %>% filter(vacant_on_12_31=="YES", nta!="") %>% left_join(nta.shp, by=c("nta"="ntacode"))
+# boro boundaries
+boro <- read_sf("https://data.cityofnewyork.us/api/geospatial/tqmj-j8zm?method=export&format=GeoJSON") %>% 
+  st_transform("+proj=longlat +datum=WGS84") %>% 
+  st_simplify(dTolerance = .00001)
 
-vacant_nta.shp <- vacant_nta %>% ungroup() %>% st_as_sf() %>% st_transform('+proj=longlat +datum=WGS84')
+vacant_nta <- leased_not_leased_2021 %>% 
+  group_by(nta, vacant_on_12_31) %>% 
+  summarize(count=n()) %>%
+  mutate(vacant_2021=round(count/sum(count)*100,2)) %>%
+  filter(vacant_on_12_31=="YES", nta!="") %>% 
+  left_join(nta.shp, by=c("nta"="ntacode"))
+
+vacant_nta.shp <- vacant_nta %>% 
+  ungroup() %>% 
+  st_as_sf() %>% 
+  st_transform('+proj=longlat +datum=WGS84') %>% 
+  #remove park cemeteries
+  filter(grepl("park-cemet*", ntaname)==F)
 
 leased_not_leased_2021 %>% filter(borough_1=="QUEENS")
 
@@ -43,25 +65,54 @@ leased_not_leased_2021 %>% filter(borough_1=="QUEENS")
 
 
 ```{r}
-pal = colorNumeric(
-  palette = "Reds",
+# check appropriate binning for the map
+# https://gistbok.ucgis.org/bok-topics/statistical-mapping-enumeration-normalization-classification#Classification
+plot(density(vacant_nta.shp$vacant_2021))
+# data is quite normal with some tail
+# using sd for the map classification
+
+# pal = colorNumeric(
+#   palette = "Reds",
+#   domain = vacant_nta.shp$vacant_2021, 
+#   na.color = "#E6E6E6", 
+#   reverse = FALSE
+# )
+#
+#
+int_nta <- classInt::classIntervals(vacant_nta.shp$vacant_2021, n = 5, style = 'sd')
+
+pal_nta <- colorBin(
+  palette = c("#800000","#a44736","#c37b6c","#ddafa7","#e5cccc"),
+  bins = int_nta$brks,
   domain = vacant_nta.shp$vacant_2021, 
-  na.color = "Grey", 
-  reverse = FALSE
+  na.color = "#E6E6E6",
+  reverse = TRUE
 )
 
-leaflet(vacant_nta.shp, options = leafletOptions(minZoom = 10), height = 700, width =  700) %>%
-  addPolygons(weight = 1,
-              fillColor = ~pal(vacant_2021),
-              color="black",
+m <- leaflet(vacant_nta.shp, 
+        options = leafletOptions(minZoom = 10), 
+        #height = 700, width =  700
+        ) %>%
+  addPolygons(data=boro, stroke = T, fill=F, color = "#666666", weight = 1) %>%
+  addPolygons(weight = 0.7,
+              fillColor = ~pal_nta(vacant_2021),
+              color="Black",
               stroke = TRUE,
               fillOpacity = 1) %>% 
   addLegend(position ="topleft", 
-            pal=pal,
+            pal=pal_nta,
             values = vacant_nta.shp$vacant_2021,
             title = "Percent Vacant",
-            labFormat = labelFormat(suffix = "%"),
-            opacity = 1) %>% setMapWidgetStyle(list(background= "white")) %>% setView(-73.95777, 40.74240, zoom = 11)
+            labFormat = labelFormat(suffix = "%", digits = 1),
+            opacity = 1) %>% 
+  setMapWidgetStyle(list(background= "white")) %>%
+    setView(-73.984865,40.710542,11) 
+
+
+mapview::mapshot(m, file = "vacant_storefronts/Storefronts_nta_map.png", 
+        vwidth = 900, vheight = 870)
+
+saveWidget(m, file="vacant_storefronts/Storefronts_nta_map_1.html")
 ```
 
 
