@@ -1,0 +1,70 @@
+---
+output:
+  html_document:
+    theme: cosmo
+    df_print: paged
+---
+
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(message = FALSE, warning = FALSE, echo = FALSE, fig.align="left", fig.width=14, fig.height=8)
+```
+
+
+```{r include=FALSE}
+library(dplyr)
+library(janitor)
+library(ggplot2)
+library(ggthemes)
+library(stringr)
+library(zoo)
+library(data.table)
+library(sf)
+library(sp)
+library(tidyr)
+library(leaflet)
+library(tibble)
+library(htmltools)
+library(leaflet.extras)
+
+# Census tract shape file
+ct.shp <- st_read("/Users/nycc/Downloads/2010\ Census\ Tracts/geo_export_da780961-2ca4-4fe7-9532-f4d844c8e8a2.shp")
+ct.shp <- st_transform(ct.shp,'+proj=longlat +datum=WGS84')
+
+leased_not_leased_2021 <- read.csv("/Users/nycc/Downloads/Storefronts_Reported_Vacant_or_Not__Filing_Year_2020_-_2021_.csv") %>% clean_names()
+
+# Council district shape file
+cd.shp <- st_read("/Users/nycc/Downloads/City\ Council\ Districts/geo_export_5ab108fe-1723-40b1-ba2a-255cb4deb4a3.shp")
+cd.shp <- st_transform(cd.shp,'+proj=longlat +datum=WGS84')
+
+cd_vacant <- leased_not_leased_2021 %>% group_by(council_district, vacant_on_12_31) %>% summarize(count=n()) %>% mutate(perc_vacant=round(count/sum(count)*100,2)) %>% left_join(cd.shp, by = c("council_district"="coun_dist"))
+
+
+cd_vacant.shp <- cd_vacant %>% filter(vacant_on_12_31=="YES") %>% ungroup() %>% st_as_sf() %>% st_transform('+proj=longlat +datum=WGS84')
+```
+
+
+```{r}
+pal = colorNumeric(
+  palette = "Reds",
+  domain = cd_vacant.shp$perc_vacant, 
+  na.color = "Grey", 
+  reverse = FALSE
+)
+
+leaflet(cd_vacant.shp, options = leafletOptions(minZoom = 10), height = 700, width =  700) %>%
+  addPolygons(weight = 1,
+              fillColor = ~pal(perc_vacant),
+              color="black",
+              stroke = TRUE,
+              fillOpacity = 1,
+              popup = paste("Council District: ", cd_vacant.shp$council_district, "</br>"," Percent Vacant: ", paste(round(cd_vacant.shp$perc_vacant*100,2),"%", sep=""))) %>% 
+  addLegend(position ="topleft", 
+            pal=pal,
+            values = cd_vacant.shp$perc_vacant,
+            title = "Percent Vacant",
+            labFormat = labelFormat(suffix = "%"),
+            opacity = 1) %>% setMapWidgetStyle(list(background= "white")) %>% setView(-73.95777, 40.74240, zoom = 11)
+```
+
+

@@ -1,0 +1,69 @@
+---
+output:
+  html_document:
+    theme: cosmo
+    df_print: paged
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(message = FALSE, warning = FALSE, echo = FALSE, fig.align="left", fig.width=14, fig.height=8)
+```
+
+
+
+```{r include=FALSE}
+library(dplyr)
+library(janitor)
+library(ggplot2)
+library(ggthemes)
+library(stringr)
+library(zoo)
+library(data.table)
+library(sf)
+library(sp)
+library(tidyr)
+library(leaflet)
+library(tibble)
+library(htmltools)
+
+# Census tract shape file
+ct.shp <- st_read("/Users/nycc/Downloads/2010\ Census\ Tracts/geo_export_da780961-2ca4-4fe7-9532-f4d844c8e8a2.shp")
+ct.shp <- st_transform(ct.shp,'+proj=longlat +datum=WGS84')
+
+ct_vacant_dataset <- read.csv("/Users/nycc/Desktop/vacant_storefronts/census_tract_vacant_2021.csv")
+
+ct_vacant <- ct_vacant_dataset %>% group_by(boro_ct201, vacant_on_12_31) %>% summarize(count_vacant=n()) %>% complete(vacant_on_12_31, fill = list(count_vacant = 0)) %>% mutate(perc_vacant=count_vacant/sum(count_vacant), perc_vacant=round(perc_vacant,2)) %>% left_join(ct.shp %>% mutate(boro_ct201=as.numeric(as.character(boro_ct201))), by = c("boro_ct201"))
+
+ct_vacant.shp <- ct_vacant %>% filter(vacant_on_12_31=="YES") %>% ungroup() %>% st_as_sf() %>% st_transform('+proj=longlat +datum=WGS84')
+```
+
+
+```{r}
+pal = colorNumeric(
+  palette = "Reds",
+  domain = ct_vacant.shp$perc_vacant, 
+  na.color = "Grey", 
+  reverse = FALSE
+)
+
+leaflet(ct_vacant.shp, options = leafletOptions(minZoom = 10), height = 500, width =  500) %>%
+  addProviderTiles("CartoDB.Positron") %>%
+  addPolygons(weight = 1,
+              fillColor = ~pal(perc_vacant),
+              color="white",
+              stroke = TRUE,
+              fillOpacity = 1) %>%
+  addPolygons(data = ct.shp %>% mutate(boro_ct201=as.numeric(as.character(boro_ct201))) %>% anti_join(ct_vacant.shp %>% data.frame(), by=c("boro_ct201")), weight = 1,
+              fillColor = "Grey",
+              color="white",
+              stroke = TRUE,
+              fillOpacity = 1) %>% 
+  addLegend(position ="topleft", 
+            pal=pal,
+            values = ct_vacant.shp$perc_vacant,
+            title = "Percent vacant",
+            opacity = 1)
+
+```
+
+
