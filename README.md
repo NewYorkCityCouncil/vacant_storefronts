@@ -18,9 +18,8 @@ New York City can be a challenging place for small businesses to operate. In add
 Local Law 157 of 2019 seeks to gather data about the state of vacant storefronts to conduct the sort of studies needed to understand the full scope of storefront vacancy in New York City. The bill requires the department of finance to collect data and establish a public dataset of commercial properties in the City.
 
 The data team analyzed local law 57 data in order to:
-- Use data to assess the severity of the problem 
+- Assess the severity of the problem 
 - Identify vacant storefront hotspots 
-- Brainstorm possible solutions
-- Report with recommendations 
+- Release recommendations for better reporting
 
 ### Scripts
