@@ -31,6 +31,11 @@ library(leaflet.extras)
 ct.shp <- st_read("/Users/nycc/Downloads/2010\ Census\ Tracts/geo_export_da780961-2ca4-4fe7-9532-f4d844c8e8a2.shp")
 ct.shp <- st_transform(ct.shp,'+proj=longlat +datum=WGS84')
 
+# boro boundaries
+boro <- read_sf("https://data.cityofnewyork.us/api/geospatial/tqmj-j8zm?method=export&format=GeoJSON") %>% 
+  st_transform("+proj=longlat +datum=WGS84") %>% 
+  st_simplify(dTolerance = .00001)
+
 ct_vacant_dataset <- read.csv("/Users/nycc/Desktop/vacant_storefronts/census_tract_vacant_2021.csv")
 
 ct_vacant <- ct_vacant_dataset %>% group_by(boro_ct201, vacant_on_12_31) %>% summarize(count_vacant=n()) %>% complete(vacant_on_12_31, fill = list(count_vacant = 0)) %>% mutate(perc_vacant=count_vacant/sum(count_vacant), perc_vacant=round(perc_vacant,2)) %>% left_join(ct.shp %>% mutate(boro_ct201=as.numeric(as.character(boro_ct201))), by = c("boro_ct201"))
@@ -119,33 +124,34 @@ ct_vacant_clusters.shp <- ct_vacant_clusters %>% left_join(ct.shp %>% mutate(bor
 
 
 ```{r, include=FALSE}
-leaflet(ct_vacant_clusters.shp %>% filter(cluster==1), options = leafletOptions(minZoom = 10), height = 500, width =  500) %>%
-  addProviderTiles("CartoDB.Positron") %>%
+leaflet(ct_vacant_clusters.shp %>% filter(cluster_recoded==1), options = leafletOptions(minZoom = 10), height = 700, width =  700) %>%
+  addPolygons(data=boro, stroke = T, fill=F, color = "#666666", weight = 1) %>%
   addPolygons(weight = 1,
               fillColor = "red",
-              color="white",
+              color="black",
               stroke = TRUE,
               fillOpacity = 0.8) %>%
-  addPolygons(data = ct_vacant_clusters.shp %>% filter(cluster==2) %>% st_as_sf() %>% st_transform('+proj=longlat +datum=WGS84'), weight = 1 ,
+  addPolygons(data = ct_vacant_clusters.shp %>% filter(cluster_recoded==2) %>% st_as_sf() %>% st_transform('+proj=longlat +datum=WGS84'), weight = 1 ,
               fillColor = "orange",
-              color="white",
+              color="black",
               stroke = TRUE,
               fillOpacity = 0.8) %>%
-  addPolygons(data = ct_vacant_clusters.shp %>% filter(cluster==0) %>% st_as_sf() %>% st_transform('+proj=longlat +datum=WGS84'), weight = 1 ,
+  addPolygons(data = ct_vacant_clusters.shp %>% filter(cluster_recoded==3) %>% st_as_sf() %>% st_transform('+proj=longlat +datum=WGS84'), weight = 1 ,
               fillColor = "pink",
-              color="white",
+              color="black",
               stroke = TRUE,
               fillOpacity = 0.6) %>% addPolygons(data = ct.shp %>% mutate(boro_ct201=as.numeric(as.character(boro_ct201))) %>% anti_join(ct_vacant.shp %>% data.frame(), by=c("boro_ct201")), weight = 1,
-              fillColor = "Grey",
-              color="white",
+              fillColor = "#E6E6E6",
+              color="black",
               stroke = TRUE,
               fillOpacity = 1) %>% addLegend(position ="topleft", 
-            colors = c("red", "orange", "pink"),
-            labels = c("vacant: 14% storefronts: 171", "vacant: 13%  storefronts: 36", "vacant: 0% storefronts: 12"),
-            title = "Cluster means",
-            opacity = 8)
+            colors = c("red", "orange", "pink", "#E6E6E6"),
+            labels = c("vacant: 15% storefronts: 216", "vacant: 11%  storefronts: 77", "vacant: 9% storefronts: 19", "NA"),
+            title = "Cluster Means",
+            opacity = 8) %>% 
+  setMapWidgetStyle(list(background= "white")) %>%
+    setView(-73.94000, 40.73309, 10.5) 
 
-ct_vacant_clusters %>% filter(perc_vacant==0) %>% ungroup() %>% summarize(mean(perc_vacant), mean(total_storefronts))
 
 ```
 
