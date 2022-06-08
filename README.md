@@ -6,7 +6,7 @@ An associated webpage for this analysis can be found [on the council website](ht
 ***  
 
 ### Data Sources 
-- [Storefronts Reported Vacant or Not (Filing Year 2020 - 2021)](https://data.cityofnewyork.us/Recreation/Walk-to-a-Park-Service-area/5vb5-y6cv](https://data.cityofnewyork.us/City-Government/Storefronts-Reported-Vacant-or-Not-Filing-Year-202/92iy-9c3n)
+- ['Storefronts Reported Vacant or Not (Filing Year 2020 - 2021)'](https://data.cityofnewyork.us/City-Government/Storefronts-Reported-Vacant-or-Not-Filing-Year-202/92iy-9c3n)
 
 - 2019 5-Year ACS Survey: *We used R package censusapi to get demographic data
 
