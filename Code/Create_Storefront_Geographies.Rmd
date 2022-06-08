@@ -226,8 +226,8 @@ colnames(pnts_final) <- colnames(lease_final)
 
 leased_not_leased_final <- lease_final %>% filter(!is.na(latitude)) %>% bind_rows(pnts_final)
 
-# Make shape file
-#leased_not_leased.shp <- leased_not_leased_final %>% st_as_sf() %>% st_transform('+proj=longlat +datum=WGS84')
+# Make file
+#write.csv(leased_not_leased_final, "/Users/nycc/Desktop/vacant_storefronts/census_tract_vacant_2021.csv", row.names = FALSE)
 
 ```
 
