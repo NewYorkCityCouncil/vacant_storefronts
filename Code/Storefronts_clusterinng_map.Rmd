@@ -141,12 +141,12 @@ leaflet(ct_vacant_clusters.shp %>% filter(cluster_recoded==1), options = leaflet
               color="black",
               stroke = TRUE,
               fillOpacity = 0.6) %>% addPolygons(data = ct.shp %>% mutate(boro_ct201=as.numeric(as.character(boro_ct201))) %>% anti_join(ct_vacant.shp %>% data.frame(), by=c("boro_ct201")), weight = 1,
-              fillColor = "#E6E6E6",
+              fillColor = "white",
               color="black",
               stroke = TRUE,
               fillOpacity = 1) %>% addLegend(position ="topleft", 
-            colors = c("red", "orange", "pink", "#E6E6E6"),
-            labels = c("vacant: 15% storefronts: 216", "vacant: 11%  storefronts: 77", "vacant: 9% storefronts: 19", "NA"),
+            colors = c("red", "orange", "pink", "white"),
+            labels = c("vacant: 15% storefronts: 216", "vacant: 11%  storefronts: 77", "vacant: 9% storefronts: 19"),
             title = "Cluster Means",
             opacity = 8) %>% 
   setMapWidgetStyle(list(background= "white")) %>%
