@@ -145,7 +145,7 @@ leaflet(ct_vacant_clusters.shp %>% filter(cluster_recoded==1), options = leaflet
               color="black",
               stroke = TRUE,
               fillOpacity = 1) %>% addLegend(position ="topleft", 
-            colors = c("red", "orange", "pink", "white"),
+            colors = c("red", "orange", "pink"),
             labels = c("vacant: 15% storefronts: 216", "vacant: 11%  storefronts: 77", "vacant: 9% storefronts: 19"),
             title = "Cluster Means",
             opacity = 8) %>% 
