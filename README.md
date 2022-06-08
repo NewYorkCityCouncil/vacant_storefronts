@@ -6,13 +6,16 @@ An associated webpage for this analysis can be found [on the council website](ht
 ***  
 
 ### Data Sources 
-- [fill in, update link](https://data.cityofnewyork.us/Recreation/Walk-to-a-Park-Service-area/5vb5-y6cv)
+- [Storefronts Reported Vacant or Not (Filing Year 2020 - 2021)]([https://data.cityofnewyork.us/Recreation/Walk-to-a-Park-Service-area/5vb5-y6cv](https://data.cityofnewyork.us/City-Government/Storefronts-Reported-Vacant-or-Not-Filing-Year-202/92iy-9c3n))
 
 - 2019 5-Year ACS Survey: *We used R package censusapi to get demographic data
 
 ### Methodology 
 
 #### Summary & Intention
+New York City can be a challenging place for small businesses to operate. In addition to adhering to occasionally complex regulatory schemes enforced by multiple City agencies, business owners confront hurdles including rising rents, taxation, competition from chain stores and e-commerce retailers, and various zoning restrictions. Over the course of the last year, a slew of beloved local establishments across the city closed amid skyrocketing costs.
+
+Local Law 157 of 2019 seeks to gather data about the state of vacant storefronts to conduct the sort of studies needed to understand the full scope of storefront vacancy in New York City. The bill requires the department of finance to collect data and establish a public dataset of commercial properties in the City.
 
 
 ### Scripts
