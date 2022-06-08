@@ -1,0 +1,235 @@
+---
+title: "Create Vacant Storefronts Data with Clean Geographies"
+output: html_document
+---
+
+```{r}
+# Notes
+
+# Leased vs not leased includes bbl for storefronts reported leased or not leased within the reporting year. For this data, I have to join with pluto data in order to get the census tract id for each bbl and then join with census tract shape file to get the shape file for each census tract
+
+# There are 5,832 observations in the data that do not match to a bbl in the pluto data (i.e. cannot get any lat/long or census tract id for these using the pluto set)
+#     - For these 5,832 observations, I had to geocode using the given address column to get the lat & long. After geocoding, 1,822 observations were still missing lat & long because the address column is messy (example: tidygeocoder does not understand east 125 street, it has to say east 125th street)
+#     - For those with messy addresses, I used some r code and some manual editing through excel to clean the addresses and the geocoded again. This resulted in ~38 missing addresses.
+#     - For the last 38 missing lat & longs, I manually searched and typed them in because I didnt know what was wrong with the address/why the geocoder would not read it.
+
+# Finally, using the lat and long, do a join with the census tract shape file to identify which census tracts belong to each point (lat & long) and then clean the dataset (ex change col names, delete some columns, etc) to join with the original 69418 observations that were not missing lat & long.
+
+# This final set includes 75,250 observations all with bbl, lat & long, census tract id, census tract shape file, and puma id
+
+
+```
+
+
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(message = FALSE, warning = FALSE, echo = FALSE, fig.align="left", fig.width=14, fig.height=8)
+```
+
+
+```{r}
+library(dplyr)
+library(janitor)
+library(ggplot2)
+library(ggthemes)
+library(stringr)
+library(zoo)
+library(data.table)
+library(sf)
+library(sp)
+library(tidyr)
+library(leaflet)
+library(tibble)
+library(htmltools)
+
+# Census tract shape file
+ct.shp <- st_read("/Users/nycc/Downloads/2010\ Census\ Tracts/geo_export_da780961-2ca4-4fe7-9532-f4d844c8e8a2.shp")
+ct.shp <- st_transform(ct.shp,'+proj=longlat +datum=WGS84')
+
+# Leased & Not Leased Data - has bbl 75250 rows
+leased_not_leased <- read.csv("/Users/nycc/Downloads/Storefronts_Reported_Leased_or_Not_Leased.csv") %>% clean_names()
+
+# Pluto data
+pluto <- fread("/Users/nycc/Downloads/nyc_pluto_21v2_csv/pluto_21v2.csv")
+
+# Has bbl and coords for bbl and ct
+leased_not_leased <- leased_not_leased %>% left_join(pluto, by=c("borough_block_lot"="bbl"), keep=TRUE)
+
+```
+
+
+
+```{r}
+######################## Missing Data ############################
+# 5832 rows with no longitude i.e. bbl not found in pluto set - these need to be geocoded
+#length(which(is.na(leased_not_leased$longitude)))
+
+library("devtools")
+devtools::install_github("jessecambon/tidygeocoder")
+library(tidygeocoder)
+
+# Create address to use for geocoding
+geocoded <- leased_not_leased %>% filter(is.na(longitude)) %>% mutate(geoAddress=paste(property_street_address_or_storefront_address, ", ", borough.x,", NY ", zip_code, sep=""))
+
+# Change some problems with some BROOKLYN addresses
+geocoded[which(grepl("BROOKLYN",geocoded$property_street_address_or_storefront_address, ignore.case = TRUE)),"property_street_address_or_storefront_address"] <- gsub(",.*","\\1",geocoded[which(grepl("BROOKLYN",geocoded$property_street_address_or_storefront_address, ignore.case = TRUE)),"property_street_address_or_storefront_address"])
+
+geocoded[which(grepl("BROOKLYN",geocoded$property_street_address_or_storefront_address, ignore.case = TRUE)),"property_street_address_or_storefront_address"] <-
+gsub("BROOKLYN.*","",geocoded[which(grepl("BROOKLYN",geocoded$property_street_address_or_storefront_address, ignore.case = TRUE)),"property_street_address_or_storefront_address"])
+
+# Not sure why I did this twice but lets keep it
+geocoded <- geocoded %>% mutate(geoAddress=paste(property_street_address_or_storefront_address, ", ", borough.x,", NY ", zip_code, sep=""))
+
+# Geocodes (get lat & long) from address
+#lat_longs <- geocoded %>% geocode(geoAddress, method = 'osm', lat = latitude , long = longitude)
+
+# Save this file as csv
+#write.csv(lat_longs,"/Users/nycc/Desktop/lat_long_storefront.csv", row.names = FALSE)
+
+# Read the created geocoded data
+lat_longs <- read.csv("/Users/nycc/Desktop/lat_long_storefront.csv")
+
+# Addresses for some are not readable for geocoding - 1822 still missing lat and long
+still_missing <- lat_longs %>% filter(is.na(latitude...281))
+
+# Clean addresses to attemt geocoding again
+still_missing$property_street_address_or_storefront_address <- as.character(still_missing$property_street_address_or_storefront_address)
+
+still_missing$property_street_address_or_storefront_address <- gsub("\\,.*","",still_missing$property_street_address_or_storefront_address)
+
+still_missing$property_street_address_or_storefront_address <- gsub("\\..*","",still_missing$property_street_address_or_storefront_address)
+
+still_missing$property_street_address_or_storefront_address <- gsub("\\APT.*","",still_missing$property_street_address_or_storefront_address)
+
+still_missing$property_street_address_or_storefront_address <- gsub("\\ UNIT.*","",still_missing$property_street_address_or_storefront_address)
+
+still_missing$property_street_address_or_storefront_address <- gsub("\\ #.*","",still_missing$property_street_address_or_storefront_address)
+
+still_missing$property_street_address_or_storefront_address <- gsub(" 5 AVENUE"," 5TH AVENUE",still_missing$property_street_address_or_storefront_address)
+
+still_missing$property_street_address_or_storefront_address <- gsub("BASEMENT","",still_missing$property_street_address_or_storefront_address)
+
+# Create csv of addresses still missing lat and long - I will edit these addresses through excel
+#write.csv(still_missing,"/Users/nycc/Desktop/missing_storefront.csv", row.names = FALSE)
+
+# Read csv with excel edited addresses
+missing_edited <- read.csv("/Users/nycc/Downloads/edited_missing_storefront\ -\ missing_storefront.csv")
+
+# Create new address for geocoding using cleaned addresses
+missing_edited <- missing_edited %>% mutate(geoAddress2=paste(property_street_address_or_storefront_address, ", ", borough.x,", NY ", zip_code, sep=""))
+
+# Geocode & create csv with lat and long again
+#lat_long_2 <- missing_edited %>% geocode(geoAddress2, method = 'osm', lat = latitude , long = longitude)
+
+#write.csv(lat_long_2, "/Users/nycc/Desktop/missing_storefront_2.csv", row.names = FALSE)
+
+lat_long_2 <- read.csv("/Users/nycc/Desktop/missing_storefront_2.csv")
+
+# Still missing some lats and longs (ugh) so I manually finished it
+lat_long_2[is.na(lat_long_2$latitude...284),c("latitude...284","longitude...285")] <- 
+data.frame(t(data.frame(c(40.804040, -73.936200),
+c(40.802570, -73.953590),
+c(40.802570, -73.953590),
+c(40.804640, -73.950960),
+c(40.804640, -73.950960),
+c(40.804640, -73.950960),
+c(40.804640, -73.950960),
+c(40.804640, -73.950960),
+c(40.813060, -73.944760),
+c(40.813060, -73.944760),
+c(40.813060, -73.944760),
+c(40.808900, -73.951670),
+c(40.816082, -73.943238),
+c(40.816082, -73.943238),
+c(40.816082, -73.943238),
+c(40.817634, -73.941894),
+c(40.817634, -73.941894),
+c(40.817634, -73.941894),
+c(40.817634, -73.941894),
+c(40.817634, -73.941894),
+c(40.695011, -73.995109),
+c(40.587641, -73.964001),
+c(40.587641, -73.964001),
+c(40.587641, -73.964001),
+c(40.587641, -73.964001),
+c(40.587641, -73.964001),
+c(40.75223, -73.86412),
+c(40.7670837, -73.8214192),
+c(40.62879180908203, -74.07389831542969),
+c(40.624818, -74.082601),
+c(40.62879180908203, -74.07389831542969),
+c(40.62879180908203, -74.07389831542969),
+c(40.624832, -74.082723),
+c(40.62879180908203, -74.07389831542969),
+c(40.62879180908203, -74.07389831542969),
+c(40.62879180908203, -74.07389831542969),
+c(40.62879180908203, -74.07389831542969),
+c(40.62879180908203, -74.07389831542969)))) %>% remove_rownames()
+
+# Clean columns
+lat_long_2 <- lat_long_2 %>% mutate(latitude...281=latitude...284, longitude...282=longitude...285)
+
+lat_long_2 <- lat_long_2[,-c(283:285)]
+
+# Should equal 5832 non NA rows
+missing_updated <- lat_longs %>% filter(!is.na(latitude...281)) %>% bind_rows(lat_long_2)
+```
+
+
+```{r}
+# Clean Data a bit
+missing_updated <- missing_updated[,-c(98:278)]
+
+colnames(missing_updated)[10:97] <- gsub(".x","", colnames(missing_updated)[10:97])
+
+missing_updated <- missing_updated %>% mutate(latitude=latitude...281, longitude=longitude...282)
+
+# Drop geo address
+missing_updated <- missing_updated[,-c(99:101)]
+
+# Find census tract for each lat and long using a join
+pnts_sf <- st_as_sf(missing_updated, coords = c('longitude', 'latitude'), crs = st_crs(ct.shp))
+
+ct.shp$boro_ct201 <- as.character(ct.shp$boro_ct201)
+
+pnts <- pnts_sf %>% mutate(
+  intersection = as.integer(st_intersects(geometry, ct.shp))
+  , area = if_else(is.na(intersection), '', ct.shp$boro_ct201[intersection])
+) 
+
+#pnts %>% group_by(area) %>% summarize(count=n())
+
+# Create boro number for leased not leased
+leased_not_leased <- leased_not_leased %>% mutate(borough_num=ifelse(borough.y=="MN",1,ifelse(borough.y=="BX",2, ifelse(borough.y=="BK",3, ifelse(borough.y=="QN",4,5)))))
+
+ct.shp$boro_code <- as.numeric(as.character(ct.shp$boro_code))
+
+ct.shp$ctlabel <- round(as.numeric(as.character(ct.shp$ctlabel)),2)
+
+# Join leased and not leased with census tract shape file to get cansus tract shape
+lease_status_bbl_ct <- leased_not_leased %>% left_join(ct.shp, by=c("borough_num"="boro_code","ct2010"="ctlabel"), keep=TRUE)
+
+# Join updated missing data with census tract shape file to get census tract shaoe
+pnts_status_bbl_ct <- pnts %>%
+    mutate(latitude = sf::st_coordinates(.)[,1],
+           longitude = sf::st_coordinates(.)[,1]) %>% data.frame() %>% left_join(ct.shp, by=c("area"="boro_ct201"), keep=TRUE)
+
+# Clean data for joining
+pnts_status_bbl_ct <- pnts_status_bbl_ct[,-c(97:98)]
+
+lease_final <- lease_status_bbl_ct[,c(1:8,96:97,100:111),]
+pnts_final <- pnts_status_bbl_ct[,c(1:8,98:99,100:111)]
+
+colnames(pnts_final) <- colnames(lease_final)
+
+# Make one final data set - join the original complete observations (census tract join) with the missing dataset that was geocoded and census tract joined to create a final dataset with 75250 complete observations (i.e. all with census tracts)
+
+leased_not_leased_final <- lease_final %>% filter(!is.na(latitude)) %>% bind_rows(pnts_final)
+
+# Make shape file
+#leased_not_leased.shp <- leased_not_leased_final %>% st_as_sf() %>% st_transform('+proj=longlat +datum=WGS84')
+
+```
+
+
+
