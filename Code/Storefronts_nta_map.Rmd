@@ -90,15 +90,15 @@ pal_nta <- colorBin(
 )
 
 m <- leaflet(vacant_nta.shp, 
-        options = leafletOptions(minZoom = 10), 
-        #height = 700, width =  700
+        options = leafletOptions(minZoom = 10), height = 700, width =  700
         ) %>%
   addPolygons(data=boro, stroke = T, fill=F, color = "#666666", weight = 1) %>%
   addPolygons(weight = 0.7,
               fillColor = ~pal_nta(vacant_2021),
               color="Black",
               stroke = TRUE,
-              fillOpacity = 1) %>% 
+              fillOpacity = 1,
+              popup = paste("NTA Name: ", paste(vacant_nta.shp$ntaname, " (", vacant_nta.shp$nta,")",sep=""), "</br>", "Number Vacant: ", vacant_nta.shp$count, "</br>" ,"Percent Vacant: ", paste(vacant_nta.shp$vacant_2021,"%", sep=""))) %>% 
   addLegend(position ="topleft", 
             pal=pal_nta,
             values = vacant_nta.shp$vacant_2021,
@@ -106,7 +106,7 @@ m <- leaflet(vacant_nta.shp,
             labFormat = labelFormat(suffix = "%", digits = 1),
             opacity = 1) %>% 
   setMapWidgetStyle(list(background= "white")) %>%
-    setView(-73.984865,40.710542,11) 
+    setView(-73.94000, 40.73309, 10.5) 
 
 
 mapview::mapshot(m, file = "vacant_storefronts/Storefronts_nta_map.png", 
