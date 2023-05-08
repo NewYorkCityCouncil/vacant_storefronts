@@ -1,0 +1,59 @@
+---
+title: "storefront_businesstypes"
+output: html_document
+date: "2023-05-08"
+---
+
+```{r setup, include=FALSE}
+library(vroom)
+library(dplyr)
+library(ggplot2)
+knitr::opts_chunk$set(echo = TRUE)
+storefronts <- vroom("https://data.cityofnewyork.us/resource/92iy-9c3n.csv?$limit=99999999999") 
+```
+
+```{r}
+head(storefronts)
+```
+```{r}
+vacant_storefronts <- storefronts %>% 
+  filter(vacant_on_12_31=="YES", council_district!="") 
+```
+
+```{r}
+head(vacant_storefronts)
+```
+
+```{r}
+vacant_storefronts$year_factor <- factor(vacant_storefronts$reporting_year)
+levels(vacant_storefronts$year_factor)
+```
+
+```{r}
+# vacant_storefronts %>% group_by(year_factor, primary_business_activity) %>% summarise(count=n(primary_business_activity))
+
+vacant_storefronts %>% group_by(year_factor, primary_business_activity) %>% summarise(count=n())
+```
+
+
+```{r}
+ggplot(data=vacant_storefronts[vacant_storefronts$primary_business_activity != "NO BUSINESS ACTIVITY IDENTIFIED",] %>% group_by(year_factor, primary_business_activity) %>% summarise(count=n()), aes(x=year_factor, y=count, fill=primary_business_activity)) + geom_col() + theme_nycc() + scale_color_discrete()
+```
+```{r}
+vacant_storefronts[vacant_storefronts$primary_business_activity != "NO BUSINESS ACTIVITY IDENTIFIED",] %>% group_by(primary_business_activity) %>% summarise(count=n())
+```
+
+
+
+```{r}
+# next: recode adn group primary_business activity
+
+# plot the 4 but also just other cats
+
+# categories: 
+# 1 - food services, 
+# 2 - health (health care or social assitance (2))
+# 3 - retail,
+# 4 - everything else is other
+```
+
