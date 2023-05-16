@@ -9,6 +9,13 @@ output:
 knitr::opts_chunk$set(message = FALSE, warning = FALSE, echo = FALSE, fig.align="left", fig.width=14, fig.height=8)
 ```
 
+```{r}
+ct.shp <- read_sf("https://services5.arcgis.com/GfwWNkhOj9bNBqoJ/arcgis/rest/services/NYC_Census_Tracts_for_2020_US_Census/FeatureServer/0/query?where=1=1&outFields=*&outSR=4326&f=pgeojson")
+```
+
+```{r}
+# census_tracts
+```
 
 
 ```{r include=FALSE}
@@ -27,35 +34,76 @@ library(tibble)
 library(htmltools)
 
 # Census tract shape file
-ct.shp <- st_read("/Users/nycc/Downloads/2010\ Census\ Tracts/geo_export_da780961-2ca4-4fe7-9532-f4d844c8e8a2.shp")
-ct.shp <- st_transform(ct.shp,'+proj=longlat +datum=WGS84')
-
-ct_vacant_dataset <- read.csv("/Users/nycc/Desktop/vacant_storefronts/census_tract_vacant_2021.csv")
-
-ct_vacant <- ct_vacant_dataset %>% group_by(boro_ct201, vacant_on_12_31) %>% summarize(count_vacant=n()) %>% complete(vacant_on_12_31, fill = list(count_vacant = 0)) %>% mutate(perc_vacant=count_vacant/sum(count_vacant), perc_vacant=round(perc_vacant,2)) %>% left_join(ct.shp %>% mutate(boro_ct201=as.numeric(as.character(boro_ct201))), by = c("boro_ct201"))
-
-ct_vacant.shp <- ct_vacant %>% filter(vacant_on_12_31=="YES") %>% ungroup() %>% st_as_sf() %>% st_transform('+proj=longlat +datum=WGS84')
+# ct.shp <- st_read("/Users/nycc/Downloads/2010\ Census\ Tracts/geo_export_da780961-2ca4-4fe7-9532-f4d844c8e8a2.shp")
+# ct.shp <- st_transform(ct.shp,'+proj=longlat +datum=WGS84')
 ```
 
+Trying to get census tracts in same formatting... some notes:
+- ct.shp has decimal points for CTLabel, ct_vacant does not; i rounded ct.shp up to nearest whole number
+- ct_vacant.shp has more rows than ct.shp because the rounded cts are preserved - i think this is okay? the percents vacant should 
 
 ```{r}
-pal = colorNumeric(
-  palette = "Reds",
+ct_vacant <- leased_not_leased_2022[leased_not_leased_2022$reporting_year == '2021 and 2022',] 
+ct_vacant$BoroCT2020 <- str_extract(ct_vacant$bb, "^\\d{1}")
+ct_vacant$census_tract_2 <- as.numeric(ct_vacant$census_tract)*100
+ct_vacant$census_tract_2 <- str_pad(ct_vacant$census_tract_2, width=6, pad="0") 
+ct_vacant <- transform(ct_vacant,BoroCT2020=paste0(BoroCT2020,census_tract_2))
+```
+
+```{r}
+ct.shp$CTLabel_round <- round(as.numeric(ct.shp$CTLabel), digits = 0)
+ct.shp$CTLabel_round <- as.numeric(ct.shp$CTLabel_round)*100
+ct.shp$CTLabel_round <- str_pad(ct.shp$CTLabel_round, width=6, pad="0")  
+ct.shp <- transform(ct.shp,BoroCT2020=paste0(BoroCode,CTLabel_round))
+```
+  
+```{r}
+ct_vacant <- ct_vacant %>% group_by(BoroCT2020, vacant_on_12_31) %>% summarize(count_vacant=n()) %>% complete(vacant_on_12_31, fill = list(count_vacant = 0)) %>% mutate(perc_vacant=count_vacant/sum(count_vacant), perc_vacant=round(perc_vacant,2)) %>% filter(vacant_on_12_31=="YES")
+```
+
+```{r}
+ct_vacant.shp <- ct_vacant %>% left_join(ct.shp %>% mutate(BoroCT2020=(as.character(BoroCT2020))), by = c("BoroCT2020")) %>% ungroup() %>% st_as_sf() %>% st_transform('+proj=longlat +datum=WGS84')
+```
+
+```{r}
+# ct_vacant$BoroCT2020 <- str_extract(ct_vacant$bb, "^\\d{1}")
+# ct_vacant <- transform(ct_vacant,BoroCT2020=paste0(BoroCT2020,str_pad(ct_vacant$census_tract, 6, pad = "0")))
+# # ct_vacant
+# ```
+# 
+# 
+# ```{r}
+# test <- left_join(census_tracts %>% mutate(BoroCT2020=as.numeric(as.character(BoroCT2020))), by = c("BoroCT2020"))
+```
+
+```{r}
+# ct_vacant_dataset <- read.csv("/Users/nycc/Desktop/vacant_storefronts/census_tract_vacant_2021.csv")
+# 
+# ct_vacant <- ct_vacant_dataset %>% group_by(boro_ct201, vacant_on_12_31) %>% summarize(count_vacant=n()) %>% complete(vacant_on_12_31, fill = list(count_vacant = 0)) %>% mutate(perc_vacant=count_vacant/sum(count_vacant), perc_vacant=round(perc_vacant,2)) %>% left_join(ct.shp %>% mutate(boro_ct201=as.numeric(as.character(boro_ct201))), by = c("boro_ct201"))
+# 
+# ct_vacant.shp <- ct_vacant %>% filter(vacant_on_12_31=="YES") %>% ungroup() %>% st_as_sf() %>% st_transform('+proj=longlat +datum=WGS84')
+```
+
+```{r}
+pal = colorBin(
+  palette = rev(nycc_pal("warm")(100)),
   domain = ct_vacant.shp$perc_vacant, 
-  na.color = "Grey", 
+  na.color = "White", 
+  bins= c(0,.09,.11,.15),
   reverse = FALSE
 )
 
 leaflet(ct_vacant.shp, options = leafletOptions(minZoom = 10), height = 500, width =  500) %>%
-  addProviderTiles("CartoDB.Positron") %>%
+  addProviderTiles(provider = "CartoDB.Positron") %>%
+    addPolygons(data=boro, stroke = T, fill=F, color = "#666666", weight = 1) %>%
   addPolygons(weight = 1,
               fillColor = ~pal(perc_vacant),
               color="white",
               stroke = TRUE,
               fillOpacity = 1) %>%
-  addPolygons(data = ct.shp %>% mutate(boro_ct201=as.numeric(as.character(boro_ct201))) %>% anti_join(ct_vacant.shp %>% data.frame(), by=c("boro_ct201")), weight = 1,
-              fillColor = "Grey",
-              color="white",
+  addPolygons(data = ct.shp %>% mutate(BoroCT2020=(as.character(BoroCT2020))) %>% anti_join(ct_vacant.shp %>% data.frame(), by=c("BoroCT2020")), weight = 1,
+              fillColor = "white",
+              color="grey",
               stroke = TRUE,
               fillOpacity = 1) %>% 
   addLegend(position ="topleft", 
@@ -65,5 +113,4 @@ leaflet(ct_vacant.shp, options = leafletOptions(minZoom = 10), height = 500, wid
             opacity = 1)
 
 ```
-
 

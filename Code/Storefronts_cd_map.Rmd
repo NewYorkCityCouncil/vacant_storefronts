@@ -90,7 +90,7 @@ int_nta <- classInt::classIntervals(vacant_cd.shp$vacant_2022, n = 5, style = 's
 # )
 
 pal_cd = colorBin(
-  palette = rev(nycc_pal("warm")(100)),
+  palette = rev(nycc_pal("cool")(100)),
   domain = vacant_cd.shp$vacant_2022, 
   na.color = "White", 
   reverse = FALSE
@@ -116,7 +116,10 @@ m <- leaflet(vacant_cd.shp,
   setMapWidgetStyle(list(background= "white")) %>%
     setView(-73.94000, 40.73309, 10.5) 
 
-m
+library(htmlwidgets)
+saveWidget(m, file=file.path('../visuals', 
+                               "vacant_cd_2022.html"))
+mapshot(m, file = "../visuals/vacant_cd_2022.html.png")
 ```
 
 
