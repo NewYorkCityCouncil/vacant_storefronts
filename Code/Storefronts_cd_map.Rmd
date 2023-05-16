@@ -28,29 +28,50 @@ library(htmltools)
 library(leaflet.extras)
 library(RSocrata)
 
-leased_not_leased_2021 <- read.csv("https://data.cityofnewyork.us/resource/92iy-9c3n.csv?$limit=999999999") %>% clean_names()
+leased_not_leased_2022 <- read.csv("https://data.cityofnewyork.us/resource/92iy-9c3n.csv?$limit=999999999") %>% clean_names()
+```
 
-# Census tract shape file
-cd.shp <- st_read("/Users/nycc/Downloads/City\ Council\ Districts/geo_export_5ab108fe-1723-40b1-ba2a-255cb4deb4a3.shp")
-cd.shp <- st_transform(cd.shp,'+proj=longlat +datum=WGS84')
+```{r}
+library(councildown)
+council_districts = unzip_sf("https://www.nyc.gov/assets/planning/download/zip/data-maps/open-data/nycc_21d.zip") %>% 
+	st_read() %>% 
+	st_transform(st_crs(4326))
+```
 
+
+```{r}
+# # Census tract shape file
+# cd.shp <- st_read("/Users/nycc/Downloads/City\ Council\ Districts/geo_export_5ab108fe-1723-40b1-ba2a-255cb4deb4a3.shp")
+# cd.shp <- st_transform(cd.shp,'+proj=longlat +datum=WGS84')
+```
+
+```{r}
 # boro boundaries
 boro <- read_sf("https://data.cityofnewyork.us/api/geospatial/tqmj-j8zm?method=export&format=GeoJSON") %>% 
   st_transform("+proj=longlat +datum=WGS84") %>% 
   st_simplify(dTolerance = .00001)
+```
 
-vacant_cd <- leased_not_leased_2021 %>% 
+
+```{r}
+head(leased_not_leased_2022)
+```
+
+
+```{r}
+vacant_cd <- leased_not_leased_2022 %>% 
   group_by(council_district, vacant_on_12_31) %>% 
   summarize(count=n()) %>%
   mutate(vacant_2021=round(count/sum(count)*100,2)) %>%
   filter(vacant_on_12_31=="YES", council_district!="") %>% 
-  left_join(cd.shp, by = c("council_district"="coun_dist"))
+  left_join(council_districts, by = c("council_district"="CounDist"))
+```
 
+```{r}
 vacant_cd.shp <- vacant_cd %>% 
   ungroup() %>% 
   st_as_sf() %>% 
   st_transform('+proj=longlat +datum=WGS84')
-
 ```
 
 
