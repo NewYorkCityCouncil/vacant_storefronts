@@ -95,17 +95,18 @@ pal = colorBin(
 
 leaflet(ct_vacant.shp, options = leafletOptions(minZoom = 10), height = 500, width =  500) %>%
   addProviderTiles(provider = "CartoDB.Positron") %>%
-    addPolygons(data=boro, stroke = T, fill=F, color = "#666666", weight = 1) %>%
-  addPolygons(weight = 1,
-              fillColor = ~pal(perc_vacant),
-              color="white",
-              stroke = TRUE,
-              fillOpacity = 1) %>%
+#    addPolygons(data=boro, stroke = T, fill=F, color = "#666666", weight = 1) %>%
+   
   addPolygons(data = ct.shp %>% mutate(BoroCT2020=(as.character(BoroCT2020))) %>% anti_join(ct_vacant.shp %>% data.frame(), by=c("BoroCT2020")), weight = 1,
               fillColor = "white",
               color="grey",
               stroke = TRUE,
               fillOpacity = 1) %>% 
+  addPolygons(weight = 1,
+              fillColor = ~pal(perc_vacant),
+              color="grey",
+              stroke = TRUE,
+              fillOpacity = 1) %>%
   addLegend(position ="topleft", 
             pal=pal,
             values = ct_vacant.shp$perc_vacant,
