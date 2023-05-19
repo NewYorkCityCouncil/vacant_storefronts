@@ -22,7 +22,7 @@ You can read our takeaways and recommendations [on the council website](https://
 #### Q3
 
 ## Data
-- [Storefronts Reported Vacant or Not (Filing Year 2020 - 2021)](https://data.cityofnewyork.us/City-Government/Storefronts-Reported-Vacant-or-Not-Filing-Year-202/92iy-9c3n)
+- [Storefronts Reported Vacant or Not](https://data.cityofnewyork.us/City-Government/Storefronts-Reported-Vacant-or-Not-Filing-Year-202/92iy-9c3n)
 
 - 2019 5-Year ACS Survey: *We used R package censusapi to get demographic data
 
