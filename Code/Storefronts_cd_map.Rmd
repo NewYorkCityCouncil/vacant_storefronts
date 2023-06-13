@@ -38,8 +38,8 @@ council_districts = unzip_sf("https://www.nyc.gov/assets/planning/download/zip/d
 	st_transform(st_crs(4326))
 ```
 
-
 ```{r}
+# ---- OLD CODE ----
 # # Census tract shape file
 # cd.shp <- st_read("/Users/nycc/Downloads/City\ Council\ Districts/geo_export_5ab108fe-1723-40b1-ba2a-255cb4deb4a3.shp")
 # cd.shp <- st_transform(cd.shp,'+proj=longlat +datum=WGS84')
@@ -81,6 +81,7 @@ vacant_cd.shp <- vacant_cd %>%
 
 int_nta <- classInt::classIntervals(vacant_cd.shp$vacant_2022, n = 5, style = 'sd')
 
+# ---- OLD CODE ----
 # pal_cd <- colorBin(
 #   palette = c("#800000","#a44736","#c37b6c","#ddafa7","#e5cccc"),
 #   bins = int_nta$brks,

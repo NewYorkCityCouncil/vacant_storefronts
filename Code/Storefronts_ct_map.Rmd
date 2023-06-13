@@ -13,11 +13,6 @@ knitr::opts_chunk$set(message = FALSE, warning = FALSE, echo = FALSE, fig.align=
 ct.shp <- read_sf("https://services5.arcgis.com/GfwWNkhOj9bNBqoJ/arcgis/rest/services/NYC_Census_Tracts_for_2020_US_Census/FeatureServer/0/query?where=1=1&outFields=*&outSR=4326&f=pgeojson")
 ```
 
-```{r}
-# census_tracts
-```
-
-
 ```{r include=FALSE}
 library(dplyr)
 library(janitor)
@@ -38,9 +33,13 @@ library(htmltools)
 # ct.shp <- st_transform(ct.shp,'+proj=longlat +datum=WGS84')
 ```
 
-Trying to get census tracts in same formatting... some notes:
-- ct.shp has decimal points for CTLabel, ct_vacant does not; i rounded ct.shp up to nearest whole number
-- ct_vacant.shp has more rows than ct.shp because the rounded cts are preserved - i think this is okay? the percents vacant should 
+Trying to get census tracts in same formatting... this definitely needs to be double checked.
+
+Some notes:
+
+- ct.shp has decimal points for CTLabel, ct_vacant does not; i rounded ct.shp up to nearest whole number. this might affect the location the data point is grouped with.
+  
+- ct_vacant.shp has more rows than ct.shp because the rounded cts are preserved - i think this is okay? 
 
 ```{r}
 ct_vacant <- leased_not_leased_2022[leased_not_leased_2022$reporting_year == '2021 and 2022',] 
@@ -66,17 +65,7 @@ ct_vacant.shp <- ct_vacant %>% left_join(ct.shp %>% mutate(BoroCT2020=(as.charac
 ```
 
 ```{r}
-# ct_vacant$BoroCT2020 <- str_extract(ct_vacant$bb, "^\\d{1}")
-# ct_vacant <- transform(ct_vacant,BoroCT2020=paste0(BoroCT2020,str_pad(ct_vacant$census_tract, 6, pad = "0")))
-# # ct_vacant
-# ```
-# 
-# 
-# ```{r}
-# test <- left_join(census_tracts %>% mutate(BoroCT2020=as.numeric(as.character(BoroCT2020))), by = c("BoroCT2020"))
-```
-
-```{r}
+# ---- OLD CODE ----
 # ct_vacant_dataset <- read.csv("/Users/nycc/Desktop/vacant_storefronts/census_tract_vacant_2021.csv")
 # 
 # ct_vacant <- ct_vacant_dataset %>% group_by(boro_ct201, vacant_on_12_31) %>% summarize(count_vacant=n()) %>% complete(vacant_on_12_31, fill = list(count_vacant = 0)) %>% mutate(perc_vacant=count_vacant/sum(count_vacant), perc_vacant=round(perc_vacant,2)) %>% left_join(ct.shp %>% mutate(boro_ct201=as.numeric(as.character(boro_ct201))), by = c("boro_ct201"))
