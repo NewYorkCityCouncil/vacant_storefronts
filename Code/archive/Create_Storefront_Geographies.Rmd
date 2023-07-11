@@ -54,7 +54,6 @@ pluto <- fread("/Users/nycc/Downloads/nyc_pluto_21v2_csv/pluto_21v2.csv")
 
 # Has bbl and coords for bbl and ct
 leased_not_leased <- leased_not_leased %>% left_join(pluto, by=c("borough_block_lot"="bbl"), keep=TRUE)
-
 ```
 
 
