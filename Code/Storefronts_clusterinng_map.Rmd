@@ -61,8 +61,6 @@ ct.shp <- transform(ct.shp,boro_ct201=paste0(BoroCode,CTLabel_round))
 
 
 ```{r}
-# ct_vacant_dataset <- read.csv("/Users/nycc/Desktop/vacant_storefronts/census_tract_vacant_2021.csv")
-
 ct_vacant <- ct_vacant_dataset %>% group_by(boro_ct201, vacant_on_12_31) %>% summarize(count_vacant=n()) %>% complete(vacant_on_12_31, fill = list(count_vacant = 0)) %>% mutate(perc_vacant=count_vacant/sum(count_vacant), perc_vacant=round(perc_vacant,2)) %>% left_join(ct.shp %>% mutate(boro_ct201=as.character(boro_ct201)), by = c("boro_ct201"))
 
 ct_vacant.shp <- ct_vacant %>% filter(vacant_on_12_31=="YES") %>% ungroup() %>% st_as_sf() %>% st_transform('+proj=longlat +datum=WGS84')
@@ -71,11 +69,6 @@ ct_vacant_clusters <- ct_vacant_dataset %>% group_by(boro_ct201, vacant_on_12_31
 
 ct_vacant_clusters <- ct_vacant_clusters[-c(1:2),] %>% filter(vacant_on_12_31=="YES")
 
-```
-
-
-
-```{r include=FALSE}
 library(cluster)
 
 set.seed(124)
@@ -127,8 +120,6 @@ ct_vacant_clusters.shp <- ct_vacant_clusters %>% left_join(ct.shp %>% mutate(bor
 
 ```
 
-
-
 ```{r include=FALSE}
 ct_vacant_clusters_no_zero <- ct_vacant_clusters %>% filter(perc_vacant!=0)
 
@@ -139,7 +130,9 @@ plot(1:10, wss,type="b", xlab= "k values")
 
 km <- kmeans(ct_vacant_clusters_no_zero[,c(4:5)], centers = 2)
 km
+```
 
+```{r}
 #vacancy$cluster = km$cluster
 ct_vacant_clusters$cluster <- 0
 ct_vacant_clusters_no_zero$cluster <- km$cluster
@@ -172,11 +165,15 @@ cluster_map <- leaflet(ct_vacant_clusters.shp %>% filter(cluster_recoded==1), op
               stroke = TRUE,
               fillOpacity = 1) %>% addLegend(position ="topleft", 
             colors = c("red", "orange", "pink"),
-            labels = c("vacant: 15% storefronts: 216", "vacant: 11%  storefronts: 77", "vacant: 9% storefronts: 19"),
+            labels = c("vacant: 14.41% storefronts: 206", "vacant: 10.38%  storefronts: 84", "vacant: 13.86% storefronts: 24"),
             title = "Cluster Means",
             opacity = 8) %>% 
   setMapWidgetStyle(list(background= "white")) %>%
     setView(-73.94000, 40.73309, 10.5) 
 ```
 
+```{r}
+km <- kmeans(ct_vacant_clusters[,c(4:5)], centers = 3)
+km
+```
 
