@@ -119,8 +119,8 @@ plot_interactive <- girafe(ggobj = plot,
                            )
 )
 
-save_html(plot_interactive, "visuals/sf_vacancy_vs_median_income_21_22.html")
-# let's look at the number of 
+saveWidget(plot_interactive, "visuals/sf_vacancy_vs_median_income_21_22.html")
+
 
 
 

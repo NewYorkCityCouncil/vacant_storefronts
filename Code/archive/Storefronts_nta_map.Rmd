@@ -28,14 +28,13 @@ library(htmltools)
 library(leaflet.extras)
 library(RSocrata)
 library(htmlwidgets)
-# leased_not_leased_2021 <- read.csv("/Users/nycc/Downloads/Storefronts_Reported_Vacant_or_Not__Filing_Year_2020_-_2021_.csv") %>% clean_names()
-# 
-#  Census tract shape file
-# nta.shp <- st_read("/Users/nycc/Downloads/2010_nta/geo_export_f3c429f1-cc95-49e4-a3a8-51efff65c68f.shp")
-# nta.shp <- st_transform(nta.shp,'+proj=longlat +datum=WGS84')
-
+#
 # read all files below via api, dont have the files locally
-leased_not_leased_2021 <- read.csv("https://data.cityofnewyork.us/resource/92iy-9c3n.csv?$limit=999999999") %>% clean_names()
+leased_not_leased_2021 <- fread("https://data.cityofnewyork.us/resource/92iy-9c3n.csv?$limit=999999999") %>% clean_names()
+
+# subset to 2021 and 2022
+leased_not_leased_2021 <- leased_not_leased_2021[reporting_year %in% "2021 and 2022", ]
+leased_not_leased_2021[, bbl := as.character(bbl)]
 
 # Census tract shape file
 nta.shp <- st_read("https://data.cityofnewyork.us/api/geospatial/cpf4-rkhq?method=export&format=GeoJSON") %>%  st_transform('+proj=longlat +datum=WGS84')
