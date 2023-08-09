@@ -27,7 +27,7 @@ library(tibble)
 library(htmltools)
 library(leaflet.extras)
 library(RSocrata)
-
+library(htmlwidgets)
 # leased_not_leased_2021 <- read.csv("/Users/nycc/Downloads/Storefronts_Reported_Vacant_or_Not__Filing_Year_2020_-_2021_.csv") %>% clean_names()
 # 
 #  Census tract shape file
@@ -109,10 +109,10 @@ m <- leaflet(vacant_nta.shp,
     setView(-73.94000, 40.73309, 10.5) 
 
 
-mapview::mapshot(m, file = "vacant_storefronts/Storefronts_nta_map.png", 
+mapview::mapshot(m, file = "visuals/Storefronts_nta_map.png", 
         vwidth = 900, vheight = 870)
 
-saveWidget(m, file="vacant_storefronts/Storefronts_nta_map_1.html")
+saveWidget(m, file="visuals/Storefronts_nta_map_21_22.html")
 ```
 
 

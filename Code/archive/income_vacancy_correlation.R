@@ -20,8 +20,6 @@ if(length(new.packages)) install.packages(new.packages)
 lapply(list.of.packages, require, character.only = TRUE)
 
 
-
-
 ### read in data
 m <- read.csv('data/prop_vac_med_inc.csv') %>% 
   mutate(prop_vac_label = round(prop_vac *100,2),
