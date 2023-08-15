@@ -9,8 +9,6 @@ output:
 knitr::opts_chunk$set(message = FALSE, warning = FALSE, echo = FALSE, fig.align="left", fig.width=14, fig.height=8)
 ```
 
-
-
 ```{r include=FALSE}
 library(dplyr)
 library(janitor)
@@ -151,12 +149,12 @@ cluster_map <- leaflet(ct_vacant_clusters.shp %>% filter(cluster_recoded==1), op
               stroke = TRUE,
               fillOpacity = 0.8) %>%
   addPolygons(data = ct_vacant_clusters.shp %>% filter(cluster_recoded==2) %>% st_as_sf() %>% st_transform('+proj=longlat +datum=WGS84'), weight = 1 ,
-              fillColor = "orange",
+              fillColor = "pink",
               color="black",
               stroke = TRUE,
               fillOpacity = 0.8) %>%
   addPolygons(data = ct_vacant_clusters.shp %>% filter(cluster_recoded==3) %>% st_as_sf() %>% st_transform('+proj=longlat +datum=WGS84'), weight = 1 ,
-              fillColor = "pink",
+              fillColor = "orange",
               color="black",
               stroke = TRUE,
               fillOpacity = 0.6) %>% addPolygons(data = ct.shp %>% mutate(boro_ct201=as.character(boro_ct201)) %>% anti_join(ct_vacant.shp %>% data.frame(), by=c("boro_ct201")), weight = 1,
@@ -173,7 +171,15 @@ cluster_map <- leaflet(ct_vacant_clusters.shp %>% filter(cluster_recoded==1), op
 ```
 
 ```{r}
-km <- kmeans(ct_vacant_clusters[,c(4:5)], centers = 3)
-km
+# km <- kmeans(ct_vacant_clusters[,c(4:5)], centers = 3)
+# km
 ```
+
+```{r}
+# saving map
+saveWidget(cluster_map, file=file.path('../visuals', 
+                               "cluster_map_2022.html"))
+mapshot(cluster_map, file = "../visuals/cluster_map_2022.png")
+```
+
 

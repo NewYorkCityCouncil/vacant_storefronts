@@ -1,0 +1,73 @@
+---
+title: "storefront_businesstypes"
+output: html_document
+date: "2023-05-08"
+---
+
+```{r setup, include=FALSE}
+library(vroom)
+library(dplyr)
+library(ggplot2)
+library(councildown)
+storefronts <- vroom("https://data.cityofnewyork.us/resource/92iy-9c3n.csv?$limit=99999999999") 
+```
+
+```{r}
+vacant_storefronts <- storefronts %>% 
+  filter(vacant_on_12_31=="YES", council_district!="") 
+vacant_storefronts$year_factor <- factor(vacant_storefronts$reporting_year)
+# levels(vacant_storefronts$year_factor)
+vacant_storefronts <- vacant_storefronts %>% mutate(primary_business_activity_2=recode(primary_business_activity, 
+                                                                 'FOOD SERVICES'='Food Services',
+                                                                 'HEALTH CARE or SOCIAL ASSISTANCE'='Health care or Social Assistance',
+                                                                 'HEALTH CARE OR SOCIAL ASSISTANCE'='Health care or Social Assistance',
+                                                                 'RETAIL'='Retail',
+                                                                 'NO BUSINESS ACTIVITY IDENTIFIED'='Unknown'))
+vacant_storefronts$primary_business_activity_2[!(vacant_storefronts$primary_business_activity_2 %in% c("Food Services","Health care or Social Assistance",'Retail', 'Unknown'))] <- 'Other'
+```
+
+```{r}
+business_activities <- vacant_storefronts %>% group_by(year_factor, primary_business_activity) %>% summarise(sum_stores=n())
+```
+
+```{r}
+ggplot(data=business_activities[business_activities$primary_business_activity!="NO BUSINESS ACTIVITY IDENTIFIED",], aes(x=year_factor, y=sum_stores, fill=primary_business_activity)) + geom_col() + theme_nycc()
+```
+
+```{r}
+business_activities_subset <- vacant_storefronts[vacant_storefronts$primary_business_activity!="NO BUSINESS ACTIVITY IDENTIFIED",] %>% group_by(year_factor, primary_business_activity_2) %>% summarise(sum_stores=n())
+temp <- business_activities_subset %>% group_by(year_factor) %>% summarise(year_total=sum(sum_stores))
+business_activities_subset <-merge(temp, business_activities_subset, by="year_factor")
+business_activities_subset$prp_stores <- business_activities_subset$sum_stores/business_activities_subset$year_total
+rm(temp)
+```
+
+```{r}
+ggplot(data=business_activities_subset, aes(x=year_factor, y=sum_stores, fill=primary_business_activity_2)) + geom_col() + theme_nycc()
+ggplot(data=business_activities_subset, aes(x=year_factor, y=prp_stores, fill=primary_business_activity_2)) + geom_col() + theme_nycc()
+```
+```{r}
+vacant_storefronts %>% 
+   add_count(bbl, name = "new_count")
+```
+
+
+```{r}
+# businesses that have been vacant since 2019
+leaflet() %>% 
+  addCouncilStyle(add_dists = TRUE) %>%
+  addCircles(data=vacant_storefronts[vacant_storefronts$primary_business_activity_2=="Retail",],
+             lng=~longitude, lat=~latitude,
+             color="pink") %>%
+  addCircles(data=vacant_storefronts[vacant_storefronts$primary_business_activity_2=="Health care or Social Assistance",],
+             lng=~longitude, lat=~latitude,
+             color="orange") %>%
+  addCircles(data=vacant_storefronts[vacant_storefronts$primary_business_activity_2=="Other",],
+             lng=~longitude, lat=~latitude,
+             color="violet") %>%
+  addCircles(data=vacant_storefronts[vacant_storefronts$primary_business_activity_2=="Food Services",],
+             lng=~longitude, lat=~latitude,
+             color="red")
+```
+
+

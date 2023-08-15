@@ -34,6 +34,7 @@ library(htmltools)
 ```
 
 Trying to get census tracts in same formatting... this definitely needs to be double checked.
+8/15/23 update: Brook has double-checked.
 
 Some notes:
 
@@ -74,14 +75,17 @@ ct_vacant.shp <- ct_vacant %>% left_join(ct.shp %>% mutate(BoroCT2020=(as.charac
 ```
 
 ```{r}
-pal = colorBin(
-  palette = rev(nycc_pal("warm")(100)),
+int_ct <- classInt::classIntervals(ct_vacant.shp$perc_vacant, n = 5, style = 'sd')
+pal = leaflet::colorBin(
+  palette =  c("#800000","#a44736","#c37b6c","#ddafa7","#e5cccc"),
   domain = ct_vacant.shp$perc_vacant, 
   na.color = "White", 
-  bins= c(0,.09,.11,.15),
-  reverse = FALSE
+  bins= int_ct$brks,
+  reverse = TRUE
 )
+```
 
+```{r}
 leaflet(ct_vacant.shp, options = leafletOptions(minZoom = 10), height = 500, width =  500) %>%
   addProviderTiles(provider = "CartoDB.Positron") %>%
 #    addPolygons(data=boro, stroke = T, fill=F, color = "#666666", weight = 1) %>%

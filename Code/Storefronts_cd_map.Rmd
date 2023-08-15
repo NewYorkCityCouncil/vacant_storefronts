@@ -10,7 +10,6 @@ output:
 knitr::opts_chunk$set(message = FALSE, warning = FALSE, echo = FALSE, fig.align="left", fig.width=14, fig.height=8)
 ```
 
-
 ```{r include=FALSE}
 library(dplyr)
 library(janitor)
@@ -76,10 +75,8 @@ vacant_cd.shp <- vacant_cd %>%
 
 
 ```{r}
-#plot(density(vacant_cd.shp$vacant_2021))
-#
 
-int_nta <- classInt::classIntervals(vacant_cd.shp$vacant_2022, n = 5, style = 'sd')
+int_cd <- classInt::classIntervals(vacant_cd.shp$vacant_2022, n = 5, style = 'sd')
 
 # ---- OLD CODE ----
 # pal_cd <- colorBin(
@@ -90,19 +87,20 @@ int_nta <- classInt::classIntervals(vacant_cd.shp$vacant_2022, n = 5, style = 's
 #   reverse = TRUE
 # )
 
-pal_cd = colorBin(
-  palette = rev(nycc_pal("cool")(100)),
+pal_cd = leaflet::colorBin( # issues with councildown's colorBin
+  palette = c("#800000","#a44736","#c37b6c","#ddafa7","#e5cccc"),
+  bins= int_cd$brks,
   domain = vacant_cd.shp$vacant_2022, 
   na.color = "White", 
-  reverse = FALSE
+  reverse = TRUE
 )
+```
 
-m <- leaflet(vacant_cd.shp, 
-        options = leafletOptions(minZoom = 10), height = 700, width =  700
-        ) %>%
-  addCouncilStyle(add_dists = TRUE) %>%
+```{r}
+m <- leaflet(vacant_cd.shp) %>%
+  addCouncilStyle(add_dists = TRUE, dist_year = "2013") %>%
 #  addPolygons(data=boro, stroke = T, fill=F, color = "#666666", weight = 1) %>%
-  addPolygons(weight = 1,
+  addPolygons(data=vacant_cd.shp, weight = 1,
               fillColor = ~pal_cd(vacant_2022),
               color="Black",
               stroke = TRUE,
@@ -113,9 +111,7 @@ m <- leaflet(vacant_cd.shp,
             values = vacant_cd.shp$vacant_2022,
             title = "Percent Vacant",
             labFormat = labelFormat(suffix = "%", digits = 1),
-            opacity = 1) %>% 
-  setMapWidgetStyle(list(background= "white")) %>%
-    setView(-73.94000, 40.73309, 10.5) 
+            opacity = 1) 
 
 library(htmlwidgets)
 saveWidget(m, file=file.path('../visuals', 
