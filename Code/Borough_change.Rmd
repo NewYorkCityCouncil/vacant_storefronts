@@ -1,0 +1,19 @@
+---
+title: "Borough_change"
+output: html_document
+date: "2023-08-15"
+---
+
+```{r setup, include=FALSE}
+library(vroom)
+ct_vacant_dataset <- vroom("https://data.cityofnewyork.us/resource/92iy-9c3n.csv?$limit=999999999") %>% clean_names()
+```
+
+```{r}
+ct_vacant_dataset_yes <- ct_vacant_dataset %>% filter(vacant_on_12_31=="YES", council_district!="") %>% group_by(reporting_year, borough) %>% summarise(n_vacant = n())
+# ct_vacant_dataset_yes
+# head(ct_vacant_dataset)
+ct_vacant_dataset_all <- ct_vacant_dataset %>% filter(council_district!="") %>% group_by(reporting_year, borough) %>% summarise(n_vacant = n())
+ct_vacant_dataset_all <- merge(ct_vacant_dataset_yes, ct_vacant_dataset_all, by=c("reporting_year", "borough"))
+```
+
