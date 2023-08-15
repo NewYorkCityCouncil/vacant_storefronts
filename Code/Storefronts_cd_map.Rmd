@@ -63,12 +63,13 @@ vacant_cd <- leased_not_leased_2022[leased_not_leased_2022$reporting_year == '20
   summarize(count=n()) %>%
   mutate(vacant_2022=round(count/sum(count)*100,2)) %>%
   filter(vacant_on_12_31=="YES", council_district!="") %>% 
-  left_join(council_districts, by = c("council_district"="CounDist"))
+  ungroup() %>% 
+  as.data.frame() %>%
+  left_join(council_districts, by = c("council_district"="CounDist")) 
 ```
 
 ```{r}
 vacant_cd.shp <- vacant_cd %>% 
-  ungroup() %>% 
   st_as_sf() %>% 
   st_transform('+proj=longlat +datum=WGS84')
 ```
@@ -76,7 +77,7 @@ vacant_cd.shp <- vacant_cd %>%
 
 ```{r}
 
-int_cd <- classInt::classIntervals(vacant_cd.shp$vacant_2022, n = 5, style = 'sd')
+int_cd <- classInt::classIntervals(vacant_cd.shp$vacant_2022, n = 5, style = 'quantile')
 
 # ---- OLD CODE ----
 # pal_cd <- colorBin(
@@ -97,15 +98,19 @@ pal_cd = leaflet::colorBin( # issues with councildown's colorBin
 ```
 
 ```{r}
-m <- leaflet(vacant_cd.shp) %>%
-  addCouncilStyle(add_dists = TRUE, dist_year = "2013") %>%
-#  addPolygons(data=boro, stroke = T, fill=F, color = "#666666", weight = 1) %>%
+m <- leaflet() %>%
+  addCouncilStyle(add_dists = TRUE) %>%
   addPolygons(data=vacant_cd.shp, weight = 1,
               fillColor = ~pal_cd(vacant_2022),
               color="Black",
               stroke = TRUE,
               fillOpacity = .7,
-              popup = paste("Council District: ", vacant_cd.shp$council_district, "</br>","Number Vacant: ", vacant_cd.shp$count, "</br>", "Percent Vacant: ", paste(vacant_cd.shp$vacant_2022,"%", sep=""))) %>% 
+              popup = paste("Council District: ", 
+                            vacant_cd.shp$council_district, 
+                            "</br>","Number Vacant: ", 
+                            vacant_cd.shp$count, 
+                            "</br>", "Percent Vacant: ", 
+                            paste(vacant_cd.shp$vacant_2022,"%", sep=""))) %>% 
   addLegend(position ="topleft", 
             pal=pal_cd,
             values = vacant_cd.shp$vacant_2022,
