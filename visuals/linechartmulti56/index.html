@@ -157,9 +157,7 @@ Chart.defaults.global.title.display = true
         yAxes: [{
           stacked: false,
           ticks: {
-            //max: 5,
-           // min: 6,
-            //stepSize: 200000,
+            min: 5,
             callback: function(value, index, values) {
               return  value.toLocaleString('en-US')+'%';
             },
@@ -175,6 +173,7 @@ Chart.defaults.global.title.display = true
         }],
         xAxes: [{
           ticks: {
+            max: "2021",
             callback: function(value, index, values) {
               return value;
             },
