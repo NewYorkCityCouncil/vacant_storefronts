@@ -14,21 +14,23 @@ knitr::opts_chunk$set(message = FALSE, warning = FALSE, echo = FALSE, fig.align=
 ```{r include=FALSE}
 library(dplyr)
 library(janitor)
-library(ggplot2)
-library(ggthemes)
+#library(ggplot2)
+#library(ggthemes)
 library(stringr)
-library(zoo)
+#library(zoo)
 library(data.table)
 library(sf)
-library(sp)
+#library(sp)
 library(tidyr)
 library(leaflet)
-library(tibble)
-library(htmltools)
-library(leaflet.extras)
-library(RSocrata)
+#library(tibble)
+#library(htmltools)
+#library(leaflet.extras)
+#library(RSocrata)
 library(htmlwidgets)
-#
+library(councildown)
+
+
 # read all files below via api, dont have the files locally
 leased_not_leased_2021 <- fread("https://data.cityofnewyork.us/resource/92iy-9c3n.csv?$limit=999999999") %>% clean_names()
 
@@ -37,7 +39,8 @@ leased_not_leased_2021 <- leased_not_leased_2021[reporting_year %in% "2021 and 2
 leased_not_leased_2021[, bbl := as.character(bbl)]
 
 # Census tract shape file
-nta.shp <- st_read("https://data.cityofnewyork.us/api/geospatial/cpf4-rkhq?method=export&format=GeoJSON") %>%  st_transform('+proj=longlat +datum=WGS84')
+nta.shp <- st_read("https://data.cityofnewyork.us/api/geospatial/cpf4-rkhq?method=export&format=GeoJSON") %>%  
+  st_transform('+proj=longlat +datum=WGS84')
 
 # boro boundaries
 boro <- read_sf("https://data.cityofnewyork.us/api/geospatial/tqmj-j8zm?method=export&format=GeoJSON") %>% 
@@ -47,9 +50,11 @@ boro <- read_sf("https://data.cityofnewyork.us/api/geospatial/tqmj-j8zm?method=e
 vacant_nta <- leased_not_leased_2021 %>% 
   group_by(nta, vacant_on_12_31) %>% 
   summarize(count=n()) %>%
-  mutate(vacant_2021=round(count/sum(count)*100,2)) %>%
-  filter(vacant_on_12_31=="YES", nta!="") %>% 
-  left_join(nta.shp, by=c("nta"="ntacode"))
+  mutate(vacant_2021=round(count/sum(count)*100, 2)) %>%
+  filter(vacant_on_12_31=="YES", nta != "") %>% 
+  ungroup() %>% as.data.frame() %>%
+  left_join(nta.shp, by = c("nta"="ntacode"), keep = T) %>%
+  st_as_sf()
 
 vacant_nta.shp <- vacant_nta %>% 
   ungroup() %>% 
@@ -57,8 +62,6 @@ vacant_nta.shp <- vacant_nta %>%
   st_transform('+proj=longlat +datum=WGS84') %>% 
   #remove park cemeteries
   filter(grepl("park-cemet*", ntaname)==F)
-
-leased_not_leased_2021 %>% filter(borough_1=="QUEENS")
 
 ```
 
@@ -88,24 +91,25 @@ pal_nta <- colorBin(
   reverse = TRUE
 )
 
-m <- leaflet(vacant_nta.shp, 
-        options = leafletOptions(minZoom = 10), height = 700, width =  700
-        ) %>%
-  addPolygons(data=boro, stroke = T, fill=F, color = "#666666", weight = 1) %>%
-  addPolygons(weight = 0.7,
+m <- councildown::leaflet() %>%
+  addPolygons(data = boro, stroke = T, fillOpacity = 0, 
+              color = "#666666", weight = 1) %>% 
+  addPolygons(data = vacant_nta.shp, 
+              weight = 0.7,
               fillColor = ~pal_nta(vacant_2021),
-              color="Black",
+              color = "black",
               stroke = TRUE,
               fillOpacity = 1,
-              popup = paste("NTA Name: ", paste(vacant_nta.shp$ntaname, " (", vacant_nta.shp$nta,")",sep=""), "</br>", "Number Vacant: ", vacant_nta.shp$count, "</br>" ,"Percent Vacant: ", paste(vacant_nta.shp$vacant_2021,"%", sep=""))) %>% 
+              popup = paste0("NTA Name: ", vacant_nta.shp$ntaname, " (", vacant_nta.shp$nta,")", 
+                            "</br>", "Number Vacant: ", vacant_nta.shp$count, 
+                            "</br>" ,"Percent Vacant: ", vacant_nta.shp$vacant_2021,"%")) %>% 
   addLegend(position ="topleft", 
             pal=pal_nta,
             values = vacant_nta.shp$vacant_2021,
             title = "Percent Vacant",
             labFormat = labelFormat(suffix = "%", digits = 1),
             opacity = 1) %>% 
-  setMapWidgetStyle(list(background= "white")) %>%
-    setView(-73.94000, 40.73309, 10.5) 
+  addCouncilStyle()
 
 
 mapview::mapshot(m, file = "visuals/Storefronts_nta_map.png", 
@@ -119,19 +123,35 @@ saveWidget(m, file="visuals/Storefronts_nta_map_21_22.html")
 
 nta_tops <- leased_not_leased_2021 %>% 
   group_by(nta, vacant_on_12_31) %>% 
-  summarize(count=n()) %>%
-  mutate(vacant_2021=round(count/sum(count)*100,2))
-setDT(nta_tops)
-nta_tops[order(count, decreasing = FALSE)][1:6]
-vpct <- dcast(nta_tops, nta + count ~ vacant_on_12_31, value.var = "vacant_2021")
-vpct[order(NO, decreasing = TRUE)]
+  summarize(count = n()) %>%
+  mutate(vacant_2021 = round(count/sum(count)*100, 2)) 
 
-# vacant on 12/31
-top_no_vac <- vpct[order(NO, decreasing = TRUE)][1:5][, .(nta)]
-top_vac <- vpct[order(YES, decreasing = TRUE)][1:6][, .(nta)]
-# get names
-leased_not_leased_2021[nta %in% top_no_vac$nta, unique(nbhd), nta]
-leased_not_leased_2021[nta %in% top_vac$nta, unique(nbhd), nta]
+nta_tops_wide = nta_tops %>%
+  pivot_wider(names_from = vacant_on_12_31, 
+              values_from = c(count, vacant_2021)) %>%
+  replace_na(list(count_YES = 0, vacant_2021_YES = 0))
+  
+
+# 6 NTAs with the lowest vacancies (by %)
+nta_tops_wide %>% 
+  filter(!grepl("99", nta)) %>%
+  arrange(vacant_2021_YES) %>%
+  head(5) %>%
+  left_join(leased_not_leased_2021 %>%
+              select(nta, nbhd) %>%
+              unique(), join_by(nta == nta)) %>%
+  select(nta, nbhd, count_YES, vacant_2021_YES)
+
+
+# 6 NTAs with the highest vacancies (by %)
+nta_tops_wide %>% 
+  filter(!grepl("99", nta)) %>%
+  arrange(desc(vacant_2021_YES)) %>%
+  head(5) %>%
+  left_join(leased_not_leased_2021 %>%
+              select(nta, nbhd) %>%
+              unique(), join_by(nta == nta)) %>%
+  select(nta, nbhd, count_YES, vacant_2021_YES)
 
 ```
 

@@ -3,9 +3,10 @@ library(sf)
 library(leaflet)
 library(censusapi)
 library(dplyr)
+library(councildown)
 source("~/utils/unzip_files.R")
 
-vs <- fread("~/vacant_storefronts/data/missing_storefront_2.csv")
+vs <- fread("data/missing_storefront_2.csv")
 
 # vacant storefronts - median rent ----------------------------------------
 
@@ -42,7 +43,8 @@ ct_shp <- sf::read_sf(unzip_sf(url)) %>%
   )
 
 rent_acs <- rent_acs %>%
-  left_join(ct_shp %>% select(!c("county", "BoroCT2020", "BoroCode")), by = "GEO_ID") %>% 
+  mutate(GEOID = paste0(state, county, tract)) %>%
+  left_join(ct_shp %>% select(!c("county", "BoroCT2020", "BoroCode")), by = "GEOID") %>% 
   st_as_sf() %>%
   st_transform("+proj=longlat +datum=WGS84")
 
