@@ -23,10 +23,7 @@ library(leaflet)
 library(tibble)
 library(htmltools)
 library(leaflet.extras)
-
-# Census tract shape file
-# ct.shp <- st_read("/Users/nycc/Downloads/2010\ Census\ Tracts/geo_export_da780961-2ca4-4fe7-9532-f4d844c8e8a2.shp")
-# ct.shp <- st_transform(ct.shp,'+proj=longlat +datum=WGS84')
+library(cluster)
 
 ct.shp <- read_sf("https://services5.arcgis.com/GfwWNkhOj9bNBqoJ/arcgis/rest/services/NYC_Census_Tracts_for_2020_US_Census/FeatureServer/0/query?where=1=1&outFields=*&outSR=4326&f=pgeojson")
 
@@ -41,28 +38,18 @@ leased_not_leased_2022 <- read.csv("https://data.cityofnewyork.us/resource/92iy-
 ```
 
 ```{r}
-ct_vacant_dataset <- leased_not_leased_2022[leased_not_leased_2022$reporting_year == '2021 and 2022',] 
-ct_vacant_dataset_2 <- leased_not_leased_2022[leased_not_leased_2022$reporting_year == '2020 and 2021',] 
-
-clean_vacant_id <- function(data) {
-  data$boro_ct201 <- str_extract(data$bb, "^\\d{1}")
-  data$census_tract_2 <- as.numeric(data$census_tract) * 100
-  data$census_tract_2 <-str_pad(data$census_tract_2, width = 6, pad = "0")
-  data <- transform(data, boro_ct201 = paste0(boro_ct201, census_tract_2))
-  return(data)
-}
-
-ct_vacant_dataset <- clean_vacant_id(ct_vacant_dataset)
-ct_vacant_dataset_2 <- clean_vacant_id(ct_vacant_dataset_2)
+ct_vacant_dataset <- leased_not_leased_2022[leased_not_leased_2022$reporting_year == '2021 and 2022',]
+ct_vacant_dataset$boro_ct201 <- str_extract(ct_vacant_dataset$bb, "^\\d{1}")
+ct_vacant_dataset$census_tract_2 <- as.numeric(ct_vacant_dataset$census_tract) * 100
+ct_vacant_dataset$census_tract_2 <-str_pad(ct_vacant_dataset$census_tract_2, width = 6, pad = "0")
+ct_vacant_dataset <- transform(ct_vacant_dataset, boro_ct201 = paste0(boro_ct201, census_tract_2))
 ```
-
 
 ```{r}
 ct.shp$CTLabel_round <- round(as.numeric(ct.shp$CTLabel), digits = 0)
 ct.shp$CTLabel_round <- as.numeric(ct.shp$CTLabel_round)*100
 ct.shp$CTLabel_round <- str_pad(ct.shp$CTLabel_round, width=6, pad="0")  
 ct.shp <- transform(ct.shp,boro_ct201=paste0(BoroCode,CTLabel_round))
-# ct_vacant_dataset$boro_ct201 <- as.character(ct_vacant_dataset$boro_ct201)
 ```
 
 ```{r}
@@ -78,64 +65,43 @@ ct.shp = ct.shp %>%
 
 ```{r}
 # aggregate the vacancy data by modified census tract and combine with spatial data
-aggregate <- function(data) {
-  agg_data <- data %>% 
-    group_by(boro_ct201, vacant_on_12_31) %>%
-    summarize(count_vacant = n()) %>%
-    complete(vacant_on_12_31, fill = list(count_vacant = 0)) %>%
-    mutate(
-      perc_vacant = count_vacant / sum(count_vacant),
-      perc_vacant = round(perc_vacant, 2)) %>%
-    ungroup() %>%
-    as.data.frame() %>%
-    left_join(ct.shp, by = c("boro_ct201"))
-  return(agg_data)
-}
-
-ct_vacant <- aggregate(ct_vacant_dataset)
-ct_vacant_2 <- aggregate(ct_vacant_dataset)
+ct_vacant <- ct_vacant_dataset %>% 
+  group_by(boro_ct201, vacant_on_12_31) %>%
+  summarize(count_vacant = n()) %>%
+  complete(vacant_on_12_31, fill = list(count_vacant = 0)) %>%
+  mutate(
+    perc_vacant = count_vacant / sum(count_vacant),
+    perc_vacant = round(perc_vacant, 2)) %>%
+  ungroup() %>%
+  as.data.frame() %>%
+  left_join(ct.shp, by = c("boro_ct201"))
 ```
 
 ```{r}
 # prep spatial data for plotting
-# ct_vacant.shp <- ct_vacant %>% 
-#   filter(vacant_on_12_31=="YES") %>% 
-#   ungroup() %>% 
-#   st_as_sf() %>% 
-#   st_transform('+proj=longlat +datum=WGS84')
-spatial_prep <- function(data) {
-  data_shp <- data %>% 
+ct_vacant.shp <- ct_vacant %>% 
   filter(vacant_on_12_31=="YES") %>% 
   ungroup() %>% 
   st_as_sf() %>% 
   st_transform('+proj=longlat +datum=WGS84')
-  return(data_shp)
-}
-
-ct_vacant.shp <- spatial_prep(ct_vacant)
-ct_vacant.shp_2 <- spatial_prep(ct_vacant_2)
 ```
 
 ```{r}
-ct_vacant_clusters <- ct_vacant_dataset %>% 
-  group_by(boro_ct201, vacant_on_12_31) %>% 
-  summarize(count_vacant=n()) %>% 
-  complete(vacant_on_12_31, fill = list(count_vacant = 0)) %>% 
-  mutate(perc_vacant = count_vacant/sum(count_vacant), 
-         perc_vacant = round(perc_vacant, 2), 
-         total_storefronts = sum(count_vacant)) 
-ct_vacant_clusters <- ct_vacant_clusters[-c(1:2),] %>% 
+ct_vacant_clusters <- ct_vacant_dataset %>%
+  group_by(boro_ct201, vacant_on_12_31) %>%
+  summarize(count_vacant=n()) %>%
+  complete(vacant_on_12_31, fill = list(count_vacant = 0)) %>%
+  mutate(perc_vacant = count_vacant/sum(count_vacant),
+         perc_vacant = round(perc_vacant, 2),
+         total_storefronts = sum(count_vacant))
+ct_vacant_clusters <- ct_vacant_clusters[-c(1:2),] %>%
   filter(vacant_on_12_31=="YES")
-
 ```
 
 ```{r}
-library(cluster)
-
 set.seed(124)
 wss <- sapply(1:10, function(k){kmeans(ct_vacant_clusters[,4:5], k, nstart = 50, iter.max = 15)$tot.withinss})
 plot(1:10, wss,type="b", xlab= "k values")
-#abline(v=4)
 
 km <- kmeans(ct_vacant_clusters[,c(4:5)], centers = 3)
 km
@@ -146,39 +112,11 @@ ct_vacant_clusters$cluster <- km$cluster
 table(ct_vacant_clusters$cluster)
 table(ct_vacant_clusters$cluster_recoded)
 
+table(ct_vacant_clusters_2$cluster)
+
 ct_vacant_clusters <- ct_vacant_clusters %>% mutate(cluster_recoded=ifelse(cluster==1,1,ifelse(cluster==2,3,2)))
 
 ct_vacant_clusters.shp <- ct_vacant_clusters %>% left_join(ct.shp %>% mutate(boro_ct201=as.character(boro_ct201)), by = c("boro_ct201")) %>% ungroup() %>% st_as_sf() %>% st_transform('+proj=longlat +datum=WGS84')
-```
-
-
-```{r}
-# ---- duplicate code ---- ?
-# leaflet(ct_vacant_clusters.shp %>% filter(cluster_recoded==1), options = leafletOptions(minZoom = 10), height = 700, width =  700) %>%
-#   addPolygons(weight = 1,
-#               fillColor = "red",
-#               color="black",
-#               stroke = TRUE,
-#               fillOpacity = 0.8) %>%
-#   addPolygons(data = ct_vacant_clusters.shp %>% filter(cluster_recoded==2) %>% st_as_sf() %>% st_transform('+proj=longlat +datum=WGS84'), weight = 1 ,
-#               fillColor = "orange",
-#               color="black",
-#               stroke = TRUE,
-#               fillOpacity = 0.8) %>%
-#   addPolygons(data = ct_vacant_clusters.shp %>% filter(cluster_recoded==3) %>% st_as_sf() %>% st_transform('+proj=longlat +datum=WGS84'), weight = 1 ,
-#               fillColor = "pink",
-#               color="black",
-#               stroke = TRUE,
-#               fillOpacity = 0.6) %>% addPolygons(data = ct.shp %>% mutate(boro_ct201=as.character(boro_ct201)) %>% anti_join(ct_vacant.shp %>% data.frame(), by=c("boro_ct201")), weight = 1,
-#               fillColor = "#E6E6E6",
-#               color="black",
-#               stroke = TRUE,
-#               fillOpacity = 1) %>% addLegend(position ="topleft", 
-#             colors = c("red", "orange", "pink", "#E6E6E6"),
-#             labels = c("vacant: 15% storefronts: 216", "vacant: 11%  storefronts: 77", "vacant: 9% storefronts: 19", "No storefronts"),
-#             title = "Cluster means",
-#             opacity = 8) %>% setMapWidgetStyle(list(background= "white")) %>% setView(-73.95777, 40.74240, zoom = 11)
-
 ```
 
 ```{r include=FALSE}
@@ -196,16 +134,33 @@ km
 ```{r}
 #vacancy$cluster = km$cluster
 ct_vacant_clusters$cluster <- 0
+
 ct_vacant_clusters_no_zero$cluster <- km$cluster
+
 ct_vacant_clusters <- ct_vacant_clusters %>% filter(perc_vacant==0) %>% bind_rows(ct_vacant_clusters_no_zero)
 ```
 
 ```{r}
-ct_vacant_clusters.shp <- ct_vacant_clusters %>% 
-  left_join(ct_vacant_clusters.shp, by = c("boro_ct201", "cluster_recoded")) %>%
+# ct_vacant_clusters.shp <- ct_vacant_clusters %>% 
+#   left_join(ct_vacant_clusters.shp, by = c("boro_ct201", "cluster_recoded")) %>%
+#   ungroup() %>% 
+#   st_as_sf() %>% 
+#   st_transform('+proj=longlat +datum=WGS84')
+# 
+# ct_vacant_clusters.shp_2 <- ct_vacant_clusters %>% 
+#   left_join(ct_vacant_clusters.shp, by = c("boro_ct201", "cluster_recoded")) %>%
+#   ungroup() %>% 
+#   st_as_sf() %>% 
+#   st_transform('+proj=longlat +datum=WGS84')
+
+shp_join <- function(ct_vacant_clust, ct_vacant_clust_shp) { joined <- ct_vacant_clust %>% 
+  left_join(ct_vacant_clust_shp, by = c("boro_ct201", "cluster_recoded")) %>%
   ungroup() %>% 
   st_as_sf() %>% 
   st_transform('+proj=longlat +datum=WGS84')
+return(joined)
+}
+ct_vacant_clusters.shp <- shp_join(ct_vacant_clusters, ct_vacant_clusters.shp)
 ```
 
 
