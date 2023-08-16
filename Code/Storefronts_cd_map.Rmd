@@ -18,6 +18,7 @@ library(ggthemes)
 library(stringr)
 library(zoo)
 library(data.table)
+library(htmlwidgets)
 library(sf)
 library(sp)
 library(tidyr)
@@ -26,12 +27,12 @@ library(tibble)
 library(htmltools)
 library(leaflet.extras)
 library(RSocrata)
+library(councildown)
 
 leased_not_leased_2022 <- read.csv("https://data.cityofnewyork.us/resource/92iy-9c3n.csv?$limit=999999999") %>% clean_names()
 ```
 
 ```{r}
-library(councildown)
 council_districts = unzip_sf("https://www.nyc.gov/assets/planning/download/zip/data-maps/open-data/nycc_21d.zip") %>% 
 	st_read() %>% 
 	st_transform(st_crs(4326))
@@ -45,17 +46,16 @@ council_districts = unzip_sf("https://www.nyc.gov/assets/planning/download/zip/d
 ```
 
 ```{r}
+# ---- OLD CODE ----
 # boro boundaries
-boro <- read_sf("https://data.cityofnewyork.us/api/geospatial/tqmj-j8zm?method=export&format=GeoJSON") %>% 
-  st_transform("+proj=longlat +datum=WGS84") %>% 
-  st_simplify(dTolerance = .00001)
+# boro <- read_sf("https://data.cityofnewyork.us/api/geospatial/tqmj-j8zm?method=export&format=GeoJSON") %>% 
+#   st_transform("+proj=longlat +datum=WGS84") %>% 
+#   st_simplify(dTolerance = .00001)
 ```
-
 
 ```{r}
 head(leased_not_leased_2022)
 ```
-
 
 ```{r}
 vacant_cd <- leased_not_leased_2022[leased_not_leased_2022$reporting_year == '2021 and 2022',] %>% 
@@ -73,10 +73,9 @@ vacant_cd.shp <- vacant_cd %>%
   st_transform('+proj=longlat +datum=WGS84')
 ```
 
-
 ```{r}
 
-int_cd <- classInt::classIntervals(vacant_cd.shp$vacant_2022, n = 5, style = 'sd')
+int_cd <- classInt::classIntervals(vacant_cd.shp$vacant_2022, n = 5, style = 'quantile')
 
 # ---- OLD CODE ----
 # pal_cd <- colorBin(
@@ -99,6 +98,7 @@ pal_cd = leaflet::colorBin( # issues with councildown's colorBin
 ```{r}
 m <- leaflet(vacant_cd.shp) %>%
   addCouncilStyle(add_dists = TRUE, dist_year = "2013") %>%
+# ---- NOT NEEDED W/ NEW COUNCILDOWN UPDATE ----
 #  addPolygons(data=boro, stroke = T, fill=F, color = "#666666", weight = 1) %>%
   addPolygons(data=vacant_cd.shp, weight = 1,
               fillColor = ~pal_cd(vacant_2022),
@@ -112,8 +112,9 @@ m <- leaflet(vacant_cd.shp) %>%
             title = "Percent Vacant",
             labFormat = labelFormat(suffix = "%", digits = 1),
             opacity = 1) 
+```
 
-library(htmlwidgets)
+```{r}
 saveWidget(m, file=file.path('../visuals', 
                                "vacant_cd_2022.html"))
 mapshot(m, file = "../visuals/vacant_cd_2022.html.png")
