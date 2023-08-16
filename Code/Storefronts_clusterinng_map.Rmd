@@ -5,6 +5,8 @@ output:
     df_print: paged
 ---
 
+Run 2020 version to get ct_vacant_clusters.shp_2 first.
+
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(message = FALSE, warning = FALSE, echo = FALSE, fig.align="left", fig.width=14, fig.height=8)
 ```
@@ -112,8 +114,6 @@ ct_vacant_clusters$cluster <- km$cluster
 table(ct_vacant_clusters$cluster)
 table(ct_vacant_clusters$cluster_recoded)
 
-table(ct_vacant_clusters_2$cluster)
-
 ct_vacant_clusters <- ct_vacant_clusters %>% mutate(cluster_recoded=ifelse(cluster==1,1,ifelse(cluster==2,3,2)))
 
 ct_vacant_clusters.shp <- ct_vacant_clusters %>% left_join(ct.shp %>% mutate(boro_ct201=as.character(boro_ct201)), by = c("boro_ct201")) %>% ungroup() %>% st_as_sf() %>% st_transform('+proj=longlat +datum=WGS84')
@@ -141,26 +141,11 @@ ct_vacant_clusters <- ct_vacant_clusters %>% filter(perc_vacant==0) %>% bind_row
 ```
 
 ```{r}
-# ct_vacant_clusters.shp <- ct_vacant_clusters %>% 
-#   left_join(ct_vacant_clusters.shp, by = c("boro_ct201", "cluster_recoded")) %>%
-#   ungroup() %>% 
-#   st_as_sf() %>% 
-#   st_transform('+proj=longlat +datum=WGS84')
-# 
-# ct_vacant_clusters.shp_2 <- ct_vacant_clusters %>% 
-#   left_join(ct_vacant_clusters.shp, by = c("boro_ct201", "cluster_recoded")) %>%
-#   ungroup() %>% 
-#   st_as_sf() %>% 
-#   st_transform('+proj=longlat +datum=WGS84')
-
-shp_join <- function(ct_vacant_clust, ct_vacant_clust_shp) { joined <- ct_vacant_clust %>% 
-  left_join(ct_vacant_clust_shp, by = c("boro_ct201", "cluster_recoded")) %>%
+ct_vacant_clusters.shp <- ct_vacant_clusters %>% 
+  left_join(ct_vacant_clusters.shp, by = c("boro_ct201", "cluster_recoded")) %>%
   ungroup() %>% 
   st_as_sf() %>% 
   st_transform('+proj=longlat +datum=WGS84')
-return(joined)
-}
-ct_vacant_clusters.shp <- shp_join(ct_vacant_clusters, ct_vacant_clusters.shp)
 ```
 
 
@@ -187,7 +172,7 @@ cluster_map <- leaflet(ct_vacant_clusters.shp , options = leafletOptions(minZoom
               stroke = TRUE,
               fillOpacity = 1) %>% addLegend(position ="topleft", 
             colors = c("red", "orange", "pink"),
-            labels = c("vacant: 14.41% storefronts: 206", "vacant: 10.38%  storefronts: 84", "vacant: 13.86% storefronts: 24"),
+            labels = c("vacant: 14.41% storefronts: 206", "vacant: 10.37%  storefronts: 84", "vacant: 13.86% storefronts: 24"),
             title = "Cluster Means",
             opacity = 8) %>% 
   setMapWidgetStyle(list(background= "white")) %>%
@@ -204,5 +189,144 @@ km
 saveWidget(cluster_map, file=file.path('../visuals', 
                                "cluster_map_2022.html"))
 mapshot(cluster_map, file = "../visuals/cluster_map_2022.png")
+```
+
+```{r}
+ct_vacant_clusters.shp_2
+```
+
+```{r}
+cluster_map <- leaflet(ct_vacant_clusters.shp , options = leafletOptions(minZoom = 10), height = 700, width =  700) %>%
+  addPolygons(data=boro, stroke = T, fill=F, color = "#666666", weight = 1) %>%
+  addPolygons(data = ct_vacant_clusters.shp %>% filter(cluster_recoded==1), weight = 1,
+              fillColor = "red",
+              color="black",
+              stroke = TRUE,
+              fillOpacity = 0.8) %>%
+  addPolygons(data = ct_vacant_clusters.shp %>% filter(cluster_recoded==2) %>% st_as_sf() %>% st_transform('+proj=longlat +datum=WGS84'), weight = 1 ,
+              fillColor = "pink",
+              color="black",
+              stroke = TRUE,
+              fillOpacity = 0.8) %>%
+  addPolygons(data = ct_vacant_clusters.shp %>% filter(cluster_recoded==3) %>% st_as_sf() %>% st_transform('+proj=longlat +datum=WGS84'), weight = 1 ,
+              fillColor = "orange",
+              color="black",
+              stroke = TRUE,
+              fillOpacity = 0.6) %>% addPolygons(data = ct.shp %>% mutate(boro_ct201=as.character(boro_ct201)) %>% anti_join(ct_vacant.shp %>% data.frame(), by=c("boro_ct201")), weight = 1,
+              fillColor = "white",
+              color="black",
+              stroke = TRUE,
+              fillOpacity = 1) %>% addLegend(position ="topleft", 
+            colors = c("red", "orange", "pink"),
+            labels = c("vacant: 14.41% storefronts: 206", "vacant: 10.37%  storefronts: 84", "vacant: 13.86% storefronts: 24"),
+            title = "Cluster Means",
+            opacity = 8) %>% 
+  setMapWidgetStyle(list(background= "white")) %>%
+    setView(-73.94000, 40.73309, 10.5) 
+```
+
+```{r}
+leaflet(ct_vacant_clusters.shp_2 , options = leafletOptions(minZoom = 10), height = 700, width =  700) %>%
+  addPolygons(data=boro, stroke = T, fill=F, color = "#666666", weight = 1) %>%
+  addPolygons(data = ct_vacant_clusters.shp_2 %>% filter(cluster_recoded==1), weight = 1,
+              fillColor = "orange",
+              color="black",
+              stroke = TRUE,
+              fillOpacity = 0.8) %>%
+  addPolygons(data = ct_vacant_clusters.shp_2 %>% filter(cluster_recoded==2) %>% st_as_sf() %>% st_transform('+proj=longlat +datum=WGS84'), weight = 1 ,
+              fillColor = "pink",
+              color="black",
+              stroke = TRUE,
+              fillOpacity = 0.8) %>%
+  addPolygons(data = ct_vacant_clusters.shp_2 %>% filter(cluster_recoded==3) %>% st_as_sf() %>% st_transform('+proj=longlat +datum=WGS84'), weight = 1 ,
+              fillColor = "red",
+              color="black",
+              stroke = TRUE,
+              fillOpacity = 0.6) %>% addPolygons(data = ct.shp %>% mutate(boro_ct201=as.character(boro_ct201)) %>% anti_join(ct_vacant.shp %>% data.frame(), by=c("boro_ct201")), weight = 1,
+              fillColor = "white",
+              color="black",
+              stroke = TRUE,
+              fillOpacity = 1) %>% addLegend(position ="topleft", 
+            colors = c("red", "orange", "pink"),
+            labels = c("vacant: 15% storefronts: 221", "vacant: 11%  storefronts: 77", "vacant: 9% storefronts: 26"),
+            title = "Cluster Means",
+            opacity = 8) %>% 
+  setMapWidgetStyle(list(background= "white")) %>%
+    setView(-73.94000, 40.73309, 10.5) 
+```
+
+
+```{r}
+merged_map <- leaflet(options = leafletOptions(minZoom = 10), height = 700, width =  700) %>%
+  addPolygons(data=boro, stroke = T, fill=F, color = "#666666", weight = 1) %>%
+  
+  addPolygons(data = ct_vacant_clusters.shp %>% filter(cluster_recoded==1), 
+              group = "2021",
+              weight = 1,
+              fillColor = "red",
+              color="black",
+              stroke = TRUE,
+              fillOpacity = 1) %>%
+  addPolygons(data = ct_vacant_clusters.shp_2 %>% filter(cluster_recoded==1), weight = 1, 
+              group = "2020",
+              fillColor = "orange",
+              color="black",
+              stroke = TRUE,
+              fillOpacity = 1) %>%
+  
+  addPolygons(data = ct_vacant_clusters.shp %>% filter(cluster_recoded==2) %>% st_as_sf() %>% st_transform('+proj=longlat +datum=WGS84'), weight = 1 , 
+              group = "2021",
+              fillColor = "pink",
+              color="black",
+              stroke = TRUE,
+              fillOpacity = 1) %>%
+  addPolygons(data = ct_vacant_clusters.shp_2 %>% filter(cluster_recoded==2) %>% st_as_sf() %>% st_transform('+proj=longlat +datum=WGS84'), weight = 1 , 
+              group = "2020",
+              fillColor = "pink",
+              color="black",
+              stroke = TRUE,
+              fillOpacity = 1) %>%
+  
+  addPolygons(data = ct_vacant_clusters.shp %>% filter(cluster_recoded==3) %>% st_as_sf() %>% st_transform('+proj=longlat +datum=WGS84'), weight = 1 , 
+              group = "2021",
+              fillColor = "orange",
+              color="black",
+              stroke = TRUE,
+              fillOpacity = 1) %>% 
+  addPolygons(data = ct_vacant_clusters.shp_2 %>% filter(cluster_recoded==3) %>% st_as_sf() %>% st_transform('+proj=longlat +datum=WGS84'), weight = 1 , 
+              group = "2020",
+              fillColor = "red",
+              color="black",
+              stroke = TRUE,
+              fillOpacity = 1) %>%
+  
+  addPolygons(data = ct.shp %>% mutate(boro_ct201=as.character(boro_ct201)) %>% 
+                anti_join(ct_vacant.shp %>% data.frame(), by=c("boro_ct201")), group = "2021", weight = 1,
+              fillColor = "white",
+              color="black",
+              stroke = TRUE,
+              fillOpacity = 1) %>% addLegend(position ="topleft", 
+            colors = c("red", "orange", "pink"),
+            labels = c("vacant: 14.41% storefronts: 206", "vacant: 10.37%  storefronts: 84", "vacant: 13.86% storefronts: 24"),
+            title = "Cluster Means: 2021",
+            opacity = 8) %>% 
+  
+  addPolygons(data = ct.shp %>% mutate(boro_ct201=as.character(boro_ct201)) %>% 
+                anti_join(ct_vacant.shp %>% data.frame(), by=c("boro_ct201")), group = "2020", weight = 1,
+              fillColor = "white",
+              color="black",
+              stroke = TRUE,
+              fillOpacity = 1) %>% addLegend(position ="topleft", 
+            colors = c("red", "orange", "pink"),
+            labels = c("vacant: 15 storefronts: 221", "vacant: 11%  storefronts: 77", "vacant: 9% storefronts: 26"),
+            title = "Cluster Means: 2020",
+            opacity = 8) %>% 
+  
+  addLayersControl(
+    baseGroups = c("2020", "2021"),
+    options = layersControlOptions(collapsed = FALSE)
+  ) %>%
+  setMapWidgetStyle(list(background= "white")) %>%
+    setView(-73.94000, 40.73309, 10.5) 
 ```
 
