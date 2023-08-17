@@ -38,7 +38,7 @@ med_inc <- getCensus(
 
 setDT(med_inc)
 med_inc[, geoid := paste0(county, tract)]
-sr_med <- merge(sr, med_inc, by = "geoid")
+sr_med <- merge(sr, med_inc, by = "geoid", all.x = T)
 
 # merge with storefronts data
 incsub <- unique(sr_med[,.(geoid, reporting_year, borough_block_lot, 
@@ -121,10 +121,8 @@ plot_interactive <- girafe(ggobj = plot,
 
 saveWidget(plot_interactive, "visuals/sf_vacancy_vs_median_income_21_22.html")
 
-
-
-
-
+# Anne had some cool suggestions on how we can update the interactive plot.
+# Maybe we can look into this in the future.
 
 
 

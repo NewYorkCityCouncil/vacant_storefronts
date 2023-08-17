@@ -5,7 +5,7 @@ library(censusapi)
 library(dplyr)
 source("~/utils/unzip_files.R")
 
-vs <- fread("~/vacant_storefronts/data/missing_storefront_2.csv")
+vs <- fread("data/missing_storefront_2.csv")
 
 # vacant storefronts - median rent ----------------------------------------
 
@@ -27,7 +27,7 @@ rent_acs <- getCensus(
 
 # ct shapes
 url <- "https://www1.nyc.gov/assets/planning/download/zip/data-maps/open-data/nyct2020_22a.zip"
-ct_shp <- sf::read_sf(unzip_sf(url)) %>%
+ct_shp <- sf::read_sf(councildown::unzip_sf(url)) %>%
   mutate(
     # match county numbers with those from the acs data 
     county = case_when(
@@ -42,10 +42,8 @@ ct_shp <- sf::read_sf(unzip_sf(url)) %>%
   )
 
 rent_acs <- rent_acs %>%
-  left_join(ct_shp %>% select(!c("county", "BoroCT2020", "BoroCode")), by = "GEO_ID") %>% 
+  mutate(GEOID = paste0(state, county, tract)) %>%
+  left_join(ct_shp %>% select(!c("county", "BoroCT2020", "BoroCode")), by = "GEOID") %>% 
   st_as_sf() %>%
   st_transform("+proj=longlat +datum=WGS84")
-
-
-
 
