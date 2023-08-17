@@ -143,20 +143,20 @@ ct_vacant_clusters.shp_2 <- ct_vacant_clusters %>% left_join(ct.shp %>% mutate(b
 
 
 ```{r, include=FALSE}
-cluster_map <- leaflet(ct_vacant_clusters.shp %>% filter(cluster_recoded==1), options = leafletOptions(minZoom = 10), height = 700, width =  700) %>%
+cluster_map <- leaflet(ct_vacant_clusters.shp_2 %>% filter(cluster_recoded==1), options = leafletOptions(minZoom = 10), height = 700, width =  700) %>%
   addPolygons(data=boro, stroke = T, fill=F, color = "#666666", weight = 1) %>%
   addPolygons(weight = 1,
-              fillColor = "red",
-              color="black",
-              stroke = TRUE,
-              fillOpacity = 0.8) %>%
-  addPolygons(data = ct_vacant_clusters.shp %>% filter(cluster_recoded==2) %>% st_as_sf() %>% st_transform('+proj=longlat +datum=WGS84'), weight = 1 ,
               fillColor = "orange",
               color="black",
               stroke = TRUE,
               fillOpacity = 0.8) %>%
-  addPolygons(data = ct_vacant_clusters.shp %>% filter(cluster_recoded==3) %>% st_as_sf() %>% st_transform('+proj=longlat +datum=WGS84'), weight = 1 ,
+  addPolygons(data = ct_vacant_clusters.shp_2 %>% filter(cluster_recoded==2) %>% st_as_sf() %>% st_transform('+proj=longlat +datum=WGS84'), weight = 1 ,
               fillColor = "pink",
+              color="black",
+              stroke = TRUE,
+              fillOpacity = 0.8) %>%
+  addPolygons(data = ct_vacant_clusters.shp_2 %>% filter(cluster_recoded==3) %>% st_as_sf() %>% st_transform('+proj=longlat +datum=WGS84'), weight = 1 ,
+              fillColor = "red",
               color="black",
               stroke = TRUE,
               fillOpacity = 0.6) %>% addPolygons(data = ct.shp %>% mutate(boro_ct201=as.character(boro_ct201)) %>% anti_join(ct_vacant.shp %>% data.frame(), by=c("boro_ct201")), weight = 1,
@@ -165,7 +165,7 @@ cluster_map <- leaflet(ct_vacant_clusters.shp %>% filter(cluster_recoded==1), op
               stroke = TRUE,
               fillOpacity = 1) %>% addLegend(position ="topleft", 
             colors = c("red", "orange", "pink"),
-            labels = c("vacant: 14.41% storefronts: 206", "vacant: 10.38%  storefronts: 84", "vacant: 13.86% storefronts: 24"),
+            labels = c("vacant: 15.24% storefronts: 221", "vacant: 10.94%%  storefronts: 89", "vacant: 13.72% storefronts: 27"),
             title = "Cluster Means",
             opacity = 8) %>% 
   setMapWidgetStyle(list(background= "white")) %>%

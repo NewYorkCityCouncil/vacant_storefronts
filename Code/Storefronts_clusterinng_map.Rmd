@@ -27,6 +27,8 @@ library(tibble)
 library(htmltools)
 library(leaflet.extras)
 library(cluster)
+library(htmltools)
+library(htmlwidgets)
 
 ct.shp <- read_sf("https://services5.arcgis.com/GfwWNkhOj9bNBqoJ/arcgis/rest/services/NYC_Census_Tracts_for_2020_US_Census/FeatureServer/0/query?where=1=1&outFields=*&outSR=4326&f=pgeojson")
 
@@ -67,6 +69,11 @@ ct.shp = ct.shp %>%
 ```
 
 ```{r}
+# ---- Anne's suggestion:
+# In the chunk starting row 55 we're dropping the decimal in order to be able to merge with the storefront data - which only provides the round numbers for the locations. It's BANANAS to me that they provide the data that way, by removing the decimals they are deciding to use old census tract designations, but only for tracts where there has been enough growth to merit them being divided. Frankly it makes no sense that they did that, but given that we're trying to make it work, I've at least condensed our spatial file. Previously we were merging each storefront to all tracts that it could match (ie if the storefront is reported to be in CT 2, we would merge it with both CT 2.01 and CT 2.02) now I've combined the shapes so that there will only be one existing shape labelled 2. We could use the lat lon to find the correct 2020 tract but there are some missing obs. The spatial difference is less bad than I had thought it might be - places where you see a red line are where I've combined the two (or more) tracts.
+
+# ^ The 2020 map doesn't implement this to try to best preserve the original map in the replication.
+
 # aggregate the vacancy data by modified census tract and combine with spatial data
 ct_vacant <- ct_vacant_dataset %>% 
   group_by(boro_ct201, vacant_on_12_31) %>%
@@ -268,39 +275,39 @@ merged_map <- leaflet(options = leafletOptions(minZoom = 10), height = 700, widt
               fillColor = "red",
               color="black",
               stroke = TRUE,
-              fillOpacity = 1) %>%
+              fillOpacity = .8) %>%
   addPolygons(data = ct_vacant_clusters.shp_2 %>% filter(cluster_recoded==1), weight = 1, 
               group = "2020",
               fillColor = "orange",
               color="black",
               stroke = TRUE,
-              fillOpacity = 1) %>%
+              fillOpacity = .8) %>%
   
   addPolygons(data = ct_vacant_clusters.shp %>% filter(cluster_recoded==2) %>% st_as_sf() %>% st_transform('+proj=longlat +datum=WGS84'), weight = 1 , 
               group = "2021",
               fillColor = "pink",
               color="black",
               stroke = TRUE,
-              fillOpacity = 1) %>%
+              fillOpacity = .8) %>%
   addPolygons(data = ct_vacant_clusters.shp_2 %>% filter(cluster_recoded==2) %>% st_as_sf() %>% st_transform('+proj=longlat +datum=WGS84'), weight = 1 , 
               group = "2020",
               fillColor = "pink",
               color="black",
               stroke = TRUE,
-              fillOpacity = 1) %>%
+              fillOpacity = .8) %>%
   
   addPolygons(data = ct_vacant_clusters.shp %>% filter(cluster_recoded==3) %>% st_as_sf() %>% st_transform('+proj=longlat +datum=WGS84'), weight = 1 , 
               group = "2021",
               fillColor = "orange",
               color="black",
               stroke = TRUE,
-              fillOpacity = 1) %>% 
+              fillOpacity = .8) %>% 
   addPolygons(data = ct_vacant_clusters.shp_2 %>% filter(cluster_recoded==3) %>% st_as_sf() %>% st_transform('+proj=longlat +datum=WGS84'), weight = 1 , 
               group = "2020",
               fillColor = "red",
               color="black",
               stroke = TRUE,
-              fillOpacity = 1) %>%
+              fillOpacity = 8) %>%
   
   addPolygons(data = ct.shp %>% mutate(boro_ct201=as.character(boro_ct201)) %>% 
                 anti_join(ct_vacant.shp %>% data.frame(), by=c("boro_ct201")), group = "2021", weight = 1,
