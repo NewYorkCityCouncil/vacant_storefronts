@@ -5,12 +5,12 @@ date: "2023-08-15"
 ---
 
 ```{r setup, include=FALSE}
-library(vroom)
-ct_vacant_dataset <- vroom("https://data.cityofnewyork.us/resource/92iy-9c3n.csv?$limit=999999999") %>% clean_names()
+knitr::opts_knit$set(root.dir = here::here())
+source("code/00_load_dependencies")
 ```
 
 ```{r}
-ct_vacant_dataset_yes <- ct_vacant_dataset %>% filter(vacant_on_12_31=="YES", council_district!="") %>% group_by(reporting_year, borough) %>% summarise(n_vacant = n())
+ct_vacant_dataset_yes <- vacant_dataset %>% filter(vacant_on_12_31=="YES", council_district!="") %>% group_by(reporting_year, borough) %>% summarise(n_vacant = n())
 # ct_vacant_dataset_yes
 # head(ct_vacant_dataset)
 ct_vacant_dataset_all <- ct_vacant_dataset %>% filter(council_district!="") %>% group_by(reporting_year, borough) %>% summarise(n_all = n())

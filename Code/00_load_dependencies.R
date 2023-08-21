@@ -9,7 +9,8 @@ list.of.packages <- c("tidyverse", "janitor", "lubridate",
                       "leaflet", "leaflet.extras", "htmlwidgets",
                       "skimr", "htmltools", "ggiraph", "gt", "gtExtras", 
                       "data.table", "sf", "leaflet", "cluster", "httr2",
-                      "ggthemes", "zoo", "data.table", "mapview", "vroom"
+                      "ggthemes", "zoo", "data.table", "mapview", "vroom",
+                      "here"
 )
 
 # checks if packages has been previously installed
@@ -66,3 +67,8 @@ boro.shp <- read_sf("https://data.cityofnewyork.us/api/geospatial/tqmj-j8zm?meth
 
 # Storefronts Reported Vacant or Not - https://data.cityofnewyork.us/City-Government/Storefronts-Reported-Vacant-or-Not/92iy-9c3n
 vacant_dataset <- read.csv("https://data.cityofnewyork.us/resource/92iy-9c3n.csv?$limit=999999999") %>% clean_names() 
+
+# read in old Council district boundaries
+council_districts = unzip_sf("https://www.nyc.gov/assets/planning/download/zip/data-maps/open-data/nycc_21d.zip") %>% 
+  st_read() %>% 
+  st_transform(st_crs(4326))
