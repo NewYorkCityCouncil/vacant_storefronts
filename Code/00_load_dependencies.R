@@ -72,3 +72,6 @@ vacant_dataset <- read.csv("https://data.cityofnewyork.us/resource/92iy-9c3n.csv
 council_districts = unzip_sf("https://www.nyc.gov/assets/planning/download/zip/data-maps/open-data/nycc_21d.zip") %>% 
   st_read() %>% 
   st_transform(st_crs(4326))
+
+nta.shp <- st_read("https://data.cityofnewyork.us/api/geospatial/cpf4-rkhq?method=export&format=GeoJSON") %>%  
+  st_transform('+proj=longlat +datum=WGS84')
