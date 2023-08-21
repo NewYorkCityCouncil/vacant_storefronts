@@ -4,7 +4,7 @@
 
 New York City can be a challenging place for small businesses to operate. In addition to adhering to occasionally complex regulatory schemes enforced by multiple City agencies, business owners confront hurdles including rising rents, taxation, competition from chain stores and e-commerce retailers, and various zoning restrictions. Over the course of the last year, a slew of beloved local establishments across the city closed amid skyrocketing costs.
 
-Local Law 157 of 2019 seeks to gather data about the state of vacant storefronts to conduct the sort of studies needed to understand the full scope of storefront vacancy in New York City. The bill requires the department of finance to collect data and establish a public dataset of commercial properties in the City.
+Local Law 157 of 2019 seeks to gather data about the state of vacant storefronts to conduct the sort of studies needed to understand the full scope of storefront vacancies in New York City. The bill requires the Department of Finance to collect data and establish a public dataset of commercial properties in the City.
 
 The data team analyzed local law 57 data in order to:
 - Assess the severity of the problem 
@@ -19,7 +19,7 @@ You can read our takeaways and recommendations [on the council website](https://
 You can find the [Storefronts Reported Vacant or Not](https://data.cityofnewyork.us/City-Government/Storefronts-Reported-Vacant-or-Not/92iy-9c3n) dataset on the NYC Open Data portal. 
 
 #### Who maintains the dataset and what is Local Law 157?
-In 2019, the New York City Council passed a bill requiring building owners of ground-floor and second-floor commercial premises to submit to the Department of Finance (DOF) registration statements. From those statements, the DOF collects data on commercial properties, including whether or not those properties are vacant. They are required to publish this data to the NYC Open Data portal every year or every six months if owners filed a supplemental registration statement.
+In 2019, the New York City Council passed a bill requiring building owners of ground-floor and second-floor commercial premises to submit to the Department of Finance (DOF) registration statements. From those statements, the DOF collects data on commercial properties, including whether or not those properties are vacant. They are required to publish this data to the NYC Open Data portal every year or every six months if owners file a supplemental registration statement.
 
 You can find more details about the bill [here](https://legistar.council.nyc.gov/LegislationDetail.aspx?ID=3877885&GUID=C0D2361D-766A-42E3-A5CD-F8DBB1C52E8B&Options=ID%7CText%7C&Search=157).
 
@@ -37,12 +37,21 @@ Where a commercial storefront "in a designated class one property that has not b
 All data is based on the information registered with the DOF. Data about the occupancy or vacancy status for each storefront rely solely on the information provided in the registration. 
 
 *There are two periods of time for which owners of commercial storefronts must report vacancies:*
-1. Owners can either report yes the storefront was reported vacant on 12/31 of the reporting year or no the storefront was reported owner-occupied or leased on 12/31 of the reporting year.
+1. Owners can either report 'yes' the storefront was reported vacant on 12/31 of the reporting year, or 'no' the storefront was reported owner-occupied or leased on 12/31 of the reporting year.
 2. Required for Classes 2 and 4 and optional for Class 1 storefront properties, owners after the 12/31 reporting year, can report yes the storefront was reported vacant on 6/30 or the date the property was sold if earlier than 6/30. Blank means there is no reported information.
 
  For more dataset definitions, view the data dictionary [here](https://data.cityofnewyork.us/api/views/92iy-9c3n/files/938bf7b7-8961-4b45-9dd9-1b913ef81bc3?download=true&filename=Storefront_Registrations_Parcel_Dataset_Information.xlsx)
 
 #### How clean is the data?
+There is missing and incorrectly labeled data.
+
+The Business Type and Vacant 6/30, Sold Date, and Construction Reported columns have missing and/or not reported information. For example, of storefronts reported as vacant on 12/31, nearly all had the primary business activity listed as ‘no business activity identified.
+
+In addition, for our cluster work where the unit of analysis is at the census tract level, there were difficulties in using the census tract field.  In this column, the values appear to be census tract labels. However, there are missing decimal values. Perhaps they dropped or only whole integers are accepted when the dataset was compiled. The decimals are important to correctly match a tract to its corresponding spatial boundary. 
+
+According to the Census Bureau, “when new census tracts (splits) occur within an established set of census tracts, the Census Bureau recommends retaining the original four-digit census tract number and adding a two-digit decimal suffix. As a result, Census Tract 101 may be split into Census Tracts 101.01, 101.02, and so forth, depending upon how many new census tracts are created” (Geographic Areas Reference Manual) (https://www2.census.gov/geo/pdfs/reference/GARM/Ch10GARM.pdf))
+
+Therefore, there are incorrectly labeled tracts in the column, and it is difficult to know which ones were split or have decimal values.
 
 #### How does your methodology deal with missing data?
 
