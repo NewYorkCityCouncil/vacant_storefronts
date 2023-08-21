@@ -3,69 +3,117 @@ source(file.path(getwd(),"code/00_load_dependencies.R"))
 
 ## Data quality notes ## ------------
 
-# there are 277 storefronts with incorrect census tract label of 0 in 2020-2021 reporting year, 0.3% of all storefronts
-ck <- vacant_dataset %>% 
-arrange(census_tract) %>% 
-  filter(census_tract %in% c("", "0")) %>% 
+# # check data
+# summary(ct.shp)
+# summary(vacant_dataset)
+# skim(ct.shp)
+# skim(vacant_dataset)
+# 
+# # there are 277 storefronts with incorrect census tract label of 0 in 2020-2021 reporting year, 0.3% of all storefronts
+ck <- vacant_dataset %>%
+arrange(census_tract) %>%
+  filter(census_tract %in% c("", "0", NA)) %>%
   group_by(reporting_year) %>% count()
+# 
+# # 0.3% missing latitude
+ck2 <- vacant_dataset %>%
+  arrange(census_tract) %>%
+  filter(is.na(council_district)==T) %>%
+  group_by(reporting_year) %>% count()
+
+# can we match previous period where address was not vacant to get there business activity?
+ck3 <- vacant_dataset %>% filter(vacant_on_12_31 == "NO") %>% 
+  group_by(reporting_year, primary_business_activity) %>% 
+  count()
+
+# class 1 vs class 2 & 3 reporting vacant_6_30_or_date_sold -- can we get that info?
+
+# # checked pluto dataset to get missing lat & long
+# pluto <- vroom("https://data.cityofnewyork.us/resource/64uk-42ks.csv?$limit=999999999&$select=bbl,latitude,longitude,bctcb2020")
+# 
+ck3 <- vacant_dataset %>%
+  arrange(census_tract) %>%
+  filter(is.na(vacant_dataset$latitude)==T)
+# 
+# vacant_pluto <- ck3 %>% 
+#   select(-c(latitude, longitude)) %>% 
+#   left_join(pluto, by=c('bbl'))
+
+# there are non-matching bbls, will geocode addresses instead for missing lat/lons
+
+# run geocoding function `Gcode(addr, boro)` -----
+G=c()
+r=list()
+
+
+# test 1 to see if it works
+ Gcode(ck3$property_street_address_or[1], ck3$borough[1])
+
+# run on unique addresses 
+unique_addr = ck3[,c('property_street_address_or', 
+                     'borough')] %>% 
+  unique() 
+
+# loop
+for (i in 1:dim(unique_addr)[1])
+{ 
+  G=Gcode(unique_addr[[1]][i], unique_addr[[2]][i])
+  r[i]=G[3]
+}
+#
+
+coords=c()
+bbls=c()
+
+for (i in 1:length(r)) {
+  if(is.null(r[[i]]$geometry)==F) {
+coords[i]= r[[i]]$geometry$coordinates
+bbls[i]= r[[i]]$properties$addendum$pad$bbl }
+else{
+  coords[i]=NA
+  bbls[i]=NA }
+}
+
+
+geosearch_results <- as.data.frame(cbind(bbls, coords)) %>% 
+  unnest_wider(coords, names_sep = "_")
+
+ck3 <- ck3 %>% left_join(geosearch_results, b=c('bbl'='bbls'))
+
 
 # filter out for now
 vacant_dataset <- vacant_dataset %>%  
-  filter(!census_tract %in% c("", "0")) 
+  filter(!is.na(vacant_dataset$latitude)==T)  
 
-# ---- Anne's suggestion:
-# In the chunk starting row 55 we're dropping the decimal in order to be able to merge with the storefront data - which only provides the round numbers for the locations. It's BANANAS to me that they provide the data that way, by removing the decimals they are deciding to use old census tract designations, but only for tracts where there has been enough growth to merit them being divided. Frankly it makes no sense that they did that, but given that we're trying to make it work, I've at least condensed our spatial file. Previously we were merging each storefront to all tracts that it could match (ie if the storefront is reported to be in CT 2, we would merge it with both CT 2.01 and CT 2.02) now I've combined the shapes so that there will only be one existing shape labelled 2. We could use the lat lon to find the correct 2020 tract but there are some missing obs. The spatial difference is less bad than I had thought it might be - places where you see a red line are where I've combined the two (or more) tracts.
+# make vacant dataset into points shapefile based on lat/lon
+vacant_dataset_pts.shp <- vacant_dataset %>% 
+  st_as_sf(coords = c("longitude", "latitude")) %>% st_set_crs(4326)
 
-# ^ The 2020 map doesn't implement this to try to best preserve the original map in the replication.
-
-### CLEAN VACANT DATASET ### ---- 
-
-# clean census tract column for matching to the ct.shp later on
-vacant_dataset$boro_ct <- str_extract(vacant_dataset$borough_block_lot, "^\\d{1}") #regex get borocode
-
-# nas introduced because of comma, clean first
-vacant_dataset$census_tract_2 <- as.numeric(
-  gsub(",","",vacant_dataset$census_tract))*100 # add trailing zeros
-
-vacant_dataset$census_tract_2 <- str_pad(vacant_dataset$census_tract_2,
-                                            width=6, pad="0") # leading zeros
-
-vacant_cleaned <- transform(vacant_dataset,
-                               boro_ct=paste0(boro_ct,census_tract_2)) # create clean ct
+vacant_ct.shp <- st_join(vacant_dataset_pts.shp, 
+                     ct.shp %>% select(geoid, ct_label,
+                                       boro_ct2020,nta2020, nta_name),
+                     st_intersects) 
+vacant_ct <- vacant_ct.shp %>% st_drop_geometry() %>%  as.data.frame() 
 
 
-### CLEAN CT SHAPFILE ### ----
-
-# round the CTs to match with vacant CT formatting, same zero padding as above
-# the census tracts are now 2020, believe previously they were 2010, not sure if that may have some issues
-ct.shp_cleaned <- ct.shp %>% 
-  mutate(ct_label_round = round(as.numeric(ct_label), digits = 0),
-         ct_label_round = as.numeric(ct_label_round)*100,
-         ct_label_round = str_pad(ct_label_round, width=6, pad="0")) %>% 
-  transform(boro_ct2020= as.character(paste0(boro_code, ct_label_round))) %>% 
-  rename(boro_ct = boro_ct2020) %>% 
-  group_by(boro_ct) %>% 
-  summarize(geometry = st_union(geometry))  # combining rounded shapes into one, per Anne's CR suggestion -- this prevents multiple matches error when joining later on
 
 ### CREATE TRACT VACANCY COUNTS DATASET & SHAPEFILE ### ----
 
 # keeping reporting year to make year to year comparisons, see if there have been improvement
 
-ct_vacant <- vacant_cleaned %>% 
-  group_by(reporting_year, boro_ct, vacant_on_12_31) %>% 
+ct_vacant <- vacant_ct %>% 
+  group_by(reporting_year, geoid, boro_ct2020,vacant_on_12_31) %>% 
   summarize(count_vacant=n()) %>% 
-  #complete(vacant_on_12_31, fill = list(count_vacant = 0)) %>%  code not changing anything?
   mutate(perc_vacant=count_vacant/sum(count_vacant), 
          perc_vacant=round(perc_vacant,2),
          total_storefronts=sum(count_vacant)) %>% 
   #filter(vacant_on_12_31=="YES") %>% 
-  left_join(ct.shp_cleaned,  by = c("boro_ct")) %>% ungroup() %>% 
-  as.data.frame()
+  ungroup() %>% as.data.frame()
 
 
 # make dataset into shapefile
-ct_vacant.shp <- ct_vacant %>% 
-  st_as_sf() %>% st_transform('+proj=longlat +datum=WGS84')
+ct_vacant.shp <- ct.shp %>% select(geoid, geometry) %>% 
+  right_join(ct_vacant, by='geoid')
 
 
 ### SAVE OUTPUTS ### -------------run if needed

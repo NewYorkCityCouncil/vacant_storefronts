@@ -7,10 +7,10 @@
 df_cluster_1 <- ct_vacant_clusters.shp_2 %>% filter(cluster_recoded==1) 
 df_cluster_2 <- ct_vacant_clusters.shp_2 %>% filter(cluster_recoded==2) 
 df_cluster_3 <- ct_vacant_clusters.shp_2 %>% filter(cluster_recoded==3) 
-df_cluster_4_2021 <- ct.shp_cleaned %>% 
+df_cluster_4_2021 <- ct.shp %>% 
   anti_join(ct_vacant.shp %>% as.data.frame() %>% 
               filter(reporting_year=="2020 and 2021"), 
-            by=c("boro_ct")) # outline tracts with no storefronts in 2020-2021
+            by=c("geoid")) # outline tracts with no storefronts in 2020-2021
 
 # 2021: prep datasets to visualize each cluster group
 # group into one shapefile

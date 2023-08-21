@@ -1,21 +1,18 @@
 source(file.path(getwd(),"code/01_clean_vacant_storefront_data.R"))
 
-
-# set up dataset for clustering --------
-ct_vacant_clusters <- ct_vacant %>% 
-  filter(vacant_on_12_31=="YES") %>% #focusing on tract with vacancies
-  filter(!boro_ct %in% c('1000000', '4038300')) %>% #remove park areas(central/flushing)
-  arrange(reporting_year)
+#prep
+ct_vacant_yes <- ct_vacant %>% filter(vacant_on_12_31=="YES") 
 
 ### DECIDE HOW MANY CLUSTERS ### ----
 
 # run cluster analysis for each reporting period
 wss=c()
-u=unique(ct_vacant_clusters$reporting_year)
-cols=ct_vacant_clusters[,c("reporting_year","perc_vacant", 
+u=unique(ct_vacant_yes$reporting_year)
+cols=ct_vacant_yes[,c("reporting_year","perc_vacant", 
                            "total_storefronts")] %>% 
   ungroup() %>% as.data.frame()
 all_wss = list()
+
 
 #loop
 for (i in 1:length(u)){
@@ -29,18 +26,18 @@ wss <- sapply(1:10, function(k){
 all_wss[[i]] <- c(wss) 
 }
 # check elbow plot
-plot(1:10, all_wss[[1]],type="b", xlab= "k values", ) #2019-2020
-points(1:10, all_wss[[2]],type="b",col="blue") #2020-2021
+plot(1:10, all_wss[[2]],type="b", xlab= "k values") #2020-2021
+points(1:10, all_wss[[1]],type="b",col="blue") #2019-2020
 points(1:10, all_wss[[3]],type="b",col="red") #2021-2022
 abline(v=4)
 legend("right", legend=c("2019-2020", "2020-2021", "2021-2022"),
-       col=c("black","blue", "red"), lty=1, cex=0.8, title = "Reporting years")
+       col=c("blue","black", "red"), lty=1, cex=0.8, title = "Reporting years")
 
 
 # kmeans - choosing 3 clusters 
 # repeat for each reporting period
 km=c()
-u=unique(ct_vacant_clusters$reporting_year)
+u=unique(ct_vacant_yes$reporting_year)
 all_km = list()
 
 for (i in 1:length(u)){
@@ -52,21 +49,20 @@ for (i in 1:length(u)){
 }
 
 # add the cluster in which the vacant storefront census tract falls in 
-ct_vacant_clusters$cluster <- c(all_km[[1]]$cluster, 
+ct_vacant_yes$cluster <- c(all_km[[1]]$cluster, 
                                 all_km[[2]]$cluster, 
                                 all_km[[3]]$cluster)
 #table(ct_vacant_clusters$reporting_year,ct_vacant_clusters$cluster) 
 #table(all_km[[3]][["cluster"]]) check if matches km output
 
 # recode cluster break offs into differnt grouping order 1,2,3
-ct_vacant_clusters <- ct_vacant_clusters %>% 
+ct_vacant_clusters <- ct_vacant_yes %>% 
   mutate(cluster_recoded=ifelse(cluster==1,1,
                                 ifelse(cluster==2,3,2)))
 
 # make shapefile
-ct_vacant_clusters.shp <- ct_vacant_clusters %>% 
-  left_join(ct.shp_cleaned, by = c("boro_ct")) %>% 
-  ungroup() %>% st_as_sf() %>% st_transform('+proj=longlat +datum=WGS84')
+ct_vacant_clusters.shp <- ct.shp %>% select(geoid, geometry) %>% 
+  right_join(ct_vacant_clusters , by='geoid')
 
 ### save outputs ### ------
 
@@ -130,7 +126,8 @@ ct_vacant_clusters <- ct_vacant_clusters %>%
   filter(perc_vacant==0) %>% bind_rows(ct_vacant_clusters_no_zero) 
   
 # make shapefile
-ct_vacant_clusters.shp_2 <- ct_vacant_clusters %>% 
-  st_as_sf() %>% st_transform('+proj=longlat +datum=WGS84')
+ct_vacant_clusters.shp_2 <- 
+  left_join(ct_vacant_clusters,ct.shp %>% select(geoid, geometry),
+            by='geoid') %>% ungroup() %>% st_as_sf() %>% st_transform("+proj=longlat +datum=WGS84") 
 
 # save outputs
