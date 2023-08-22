@@ -50,40 +50,48 @@ plot(density(vacant_nta.shp$vacant_2021))
 # )
 #
 #
-int_nta <- classInt::classIntervals(vacant_nta.shp$vacant_2021, n = 5, style = 'sd')
+int_nta <- classInt::classIntervals(vacant_nta.shp$vacant_2021, n = 4, style = 'sd')
 
 pal_nta <- leaflet::colorBin(
-  palette = c("#800000","#a44736","#c37b6c","#ddafa7","#e5cccc"),
+  #palette = c("#800000","#a44736","#c37b6c","#ddafa7","#e5cccc"),
+  palette = pal_nycc("warm"),
   bins = int_nta$brks,
   domain = vacant_nta.shp$vacant_2021, 
   na.color = "#E6E6E6",
-  reverse = TRUE
+  #reverse = TRUE
 )
 ```
 
 ```{r}
-m <- leaflet(vacant_nta.shp, 
-        options = leafletOptions(minZoom = 10)) %>%
-  addPolygons(data=boro, stroke = T, fill=F, color = "#666666", weight = 1) %>%
-  addPolygons(weight = 0.7,
+# m <- leaflet(vacant_nta.shp, 
+#         options = leafletOptions(minZoom = 10)) %>%
+#   addCouncilStyle() %>% 
+
+m <- leaflet() %>% 
+  addCouncilStyle() %>% 
+  addPolygons(data=boro.shp, stroke = T, fill=F, color = "#666666", weight = 1) %>%
+  addPolygons(data=vacant_nta.shp,
+    weight = 0.7,
               fillColor = ~pal_nta(vacant_2021),
               color="Black",
               stroke = TRUE,
               fillOpacity = 1,
               popup = paste("NTA Name: ", paste(vacant_nta.shp$ntaname, " (", vacant_nta.shp$nta,")",sep=""), "</br>", "Number Vacant: ", vacant_nta.shp$count, "</br>" ,"Percent Vacant: ", paste(vacant_nta.shp$vacant_2021,"%", sep=""))) %>% 
-  addLegend(position ="topleft", 
+  addLegend_decreasing(position ="topleft", decreasing = T,
             pal=pal_nta,
             values = vacant_nta.shp$vacant_2021,
             title = "Percent Vacant",
             labFormat = labelFormat(suffix = "%", digits = 1),
-            opacity = 1) %>% 
-  setMapWidgetStyle(list(background= "white")) %>%
-    setView(-73.94000, 40.73309, 10.5) 
+            opacity = 1)  
+  # setMapWidgetStyle(list(background= "white")) %>%
+  #   setView(-73.94000, 40.73309, 10.5) 
 
 
-mapview::mapshot(m, file = "visuals/Storefronts_nta_map.png", 
-        vwidth = 900, vheight = 870)
+# mapview::mapshot(m, file = "visuals/Storefronts_nta_map.png", 
+#         vwidth = 900, vheight = 870)
 
+mapshot(m, file = "visuals/Storefronts_nta_map.png")
+         
 saveWidget(m, file="visuals/Storefronts_nta_map_21_22.html")
 ```
 

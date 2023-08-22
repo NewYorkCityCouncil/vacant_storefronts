@@ -51,11 +51,12 @@ int_cd <- classInt::classIntervals(vacant_cd.shp$vacant_2022, n = 5, style = 'qu
 # )
 
 pal_cd = leaflet::colorBin( # issues with councildown's colorBin
-  palette = c("#800000","#a44736","#c37b6c","#ddafa7","#e5cccc"),
+  #palette = c("#800000","#a44736","#c37b6c","#ddafa7","#e5cccc"),
+  palette = pal_nycc("warm"),
   bins= int_cd$brks,
   domain = vacant_cd.shp$vacant_2022, 
-  na.color = "White", 
-  reverse = TRUE
+  na.color = "White",
+  #reverse = T
 )
 ```
 
@@ -70,7 +71,7 @@ m <- leaflet(vacant_cd.shp) %>%
               stroke = TRUE,
               fillOpacity = .7,
               popup = paste("Council District: ", vacant_cd.shp$council_district, "</br>","Number Vacant: ", vacant_cd.shp$count, "</br>", "Percent Vacant: ", paste(vacant_cd.shp$vacant_2022,"%", sep=""))) %>% 
-  addLegend(position ="topleft", 
+  addLegend_decreasing(position ="topleft", decreasing = T,
             pal=pal_cd,
             values = vacant_cd.shp$vacant_2022,
             title = "Percent Vacant",
@@ -79,9 +80,9 @@ m <- leaflet(vacant_cd.shp) %>%
 ```
 
 ```{r}
-saveWidget(m, file=file.path('../visuals', 
+saveWidget(m, file=file.path('visuals', 
                                "vacant_cd_2022.html"))
-mapshot(m, file = "../visuals/vacant_cd_2022.html.png")
+mapshot(m, file = "visuals/vacant_cd_2022.html.png")
 ```
 
 

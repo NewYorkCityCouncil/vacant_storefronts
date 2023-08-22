@@ -10,7 +10,7 @@ list.of.packages <- c("tidyverse", "janitor", "lubridate",
                       "skimr", "htmltools", "ggiraph", "gt", "gtExtras", 
                       "data.table", "sf", "leaflet", "cluster", "httr2",
                       "ggthemes", "zoo", "data.table", "mapview", "vroom",
-                      "here"
+                      "here", "classInt"
 )
 
 # checks if packages has been previously installed
