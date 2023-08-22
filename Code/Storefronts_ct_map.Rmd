@@ -8,7 +8,7 @@ output:
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(message = FALSE, warning = FALSE, echo = FALSE, fig.align="left")
 knitr::opts_knit$set(root.dir = here::here())
-source("code/00_load_dependencies")
+source("code/00_load_dependencies.R")
 ```
 
 
