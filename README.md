@@ -54,6 +54,10 @@ According to the Census Bureau, “when new census tracts (splits) occur within 
 Therefore, there are incorrectly labeled tracts in the column, and it is difficult to know which ones were split or have decimal values.
 
 #### How does your methodology deal with missing data?
+For our cluster analysis, we grouped census tracts together based on tracts sharing similar vacancy rates and total number of storefronts. Clustering is an analysis where data is classified into categories, previously undefined, based on their similarities. We identified areas in NYC that have higher than average vacancy rates as well as a large number of total storefronts.
+ 
+In order to get the correct census tract for each storefront in the dataset, we used the ‘latitude’/’longitude’ and ‘bbl’ columns. We matched bbls to the PLUTO file (https://www.nyc.gov/assets/planning/download/zip/data-maps/open-data/nyc_pluto_21v2_arc_csv.zip) to get the census tract id. For storefronts with non-matching bbls, we geocoded the addresses using tidygeocoder.
+
 
 #### Can I use the maps & findings in my own work?
 Yes! Please attribute credit to the New York City Council Data Team.
