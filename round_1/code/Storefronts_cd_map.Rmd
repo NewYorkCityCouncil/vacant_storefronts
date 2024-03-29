@@ -1,0 +1,88 @@
+---
+output:
+  html_document:
+    theme: cosmo
+    df_print: paged
+---
+
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(message = FALSE, warning = FALSE, echo = FALSE, fig.align="left")
+knitr::opts_knit$set(root.dir = here::here())
+```
+
+```{r include=FALSE}
+source("code/00_load_dependencies.R")
+```
+
+
+
+```{r}
+head(vacant_dataset)
+```
+
+```{r}
+vacant_cd <- vacant_dataset[vacant_dataset$reporting_year == '2021 and 2022',] %>% 
+  group_by(council_district, vacant_on_12_31) %>% 
+  summarize(count=n()) %>%
+  mutate(vacant_2022=round(count/sum(count)*100,2)) %>%
+  filter(vacant_on_12_31=="YES", council_district!="") %>% 
+  left_join(council_districts, by = c("council_district"="CounDist"))
+```
+
+```{r}
+vacant_cd.shp <- vacant_cd %>% 
+  ungroup() %>% 
+  st_as_sf() %>% 
+  st_transform('+proj=longlat +datum=WGS84')
+```
+
+```{r}
+
+int_cd <- classInt::classIntervals(vacant_cd.shp$vacant_2022, n = 5, style = 'quantile')
+
+# ---- OLD CODE ----
+# pal_cd <- colorBin(
+#   palette = c("#800000","#a44736","#c37b6c","#ddafa7","#e5cccc"),
+#   bins = int_nta$brks,
+#   domain = vacant_cd.shp$vacant_2021, 
+#   na.color = "#E6E6E6",
+#   reverse = TRUE
+# )
+
+pal_cd = leaflet::colorBin( # issues with councildown's colorBin
+  #palette = c("#800000","#a44736","#c37b6c","#ddafa7","#e5cccc"),
+  palette = pal_nycc("warm"),
+  bins= int_cd$brks,
+  domain = vacant_cd.shp$vacant_2022, 
+  na.color = "White",
+  #reverse = T
+)
+```
+
+```{r}
+m <- leaflet(vacant_cd.shp) %>%
+  addCouncilStyle(add_dists = TRUE, dist_year = "2013") %>%
+# ---- NOT NEEDED W/ NEW COUNCILDOWN UPDATE ----
+#  addPolygons(data=boro, stroke = T, fill=F, color = "#666666", weight = 1) %>%
+  addPolygons(data=vacant_cd.shp, weight = 1,
+              fillColor = ~pal_cd(vacant_2022),
+              color="Black",
+              stroke = TRUE,
+              fillOpacity = .7,
+              popup = paste("Council District: ", vacant_cd.shp$council_district, "</br>","Number Vacant: ", vacant_cd.shp$count, "</br>", "Percent Vacant: ", paste(vacant_cd.shp$vacant_2022,"%", sep=""))) %>% 
+  addLegend_decreasing(position ="topleft", decreasing = T,
+            pal=pal_cd,
+            values = vacant_cd.shp$vacant_2022,
+            title = "Percent Vacant",
+            labFormat = labelFormat(suffix = "%", digits = 1),
+            opacity = 1) 
+```
+
+```{r}
+saveWidget(m, file=file.path('visuals', 
+                               "vacant_cd_2022.html"))
+mapshot(m, file = "visuals/vacant_cd_2022.html.png")
+```
+
+

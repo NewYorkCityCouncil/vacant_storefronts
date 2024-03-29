@@ -1,0 +1,89 @@
+---
+output:
+  html_document:
+    theme: cosmo
+    df_print: paged
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(message = FALSE, warning = FALSE, echo = FALSE, fig.align="left")
+knitr::opts_knit$set(root.dir = here::here())
+source("code/00_load_dependencies.R")
+```
+
+
+Trying to get census tracts in same formatting... this definitely needs to be double checked.
+8/15/23 update: Brook has double-checked.
+
+Some notes:
+
+- ct.shp has decimal points for CTLabel, ct_vacant does not; i rounded ct.shp up to nearest whole number. this might affect the location the data point is grouped with.
+  
+- ct_vacant.shp has more rows than ct.shp because the rounded cts are preserved - i think this is okay? 
+
+```{r}
+ct_vacant <- vacant_dataset[vacant_dataset$reporting_year == '2021 and 2022',] 
+ct_vacant$BoroCT2020 <- str_extract(ct_vacant$bb, "^\\d{1}")
+ct_vacant$census_tract_2 <- as.numeric(ct_vacant$census_tract)*100
+ct_vacant$census_tract_2 <- str_pad(ct_vacant$census_tract_2, width=6, pad="0") 
+ct_vacant <- transform(ct_vacant,BoroCT2020=paste0(BoroCT2020,census_tract_2))
+```
+
+```{r}
+ct.shp$CTLabel_round <- round(as.numeric(ct.shp$CTLabel), digits = 0)
+ct.shp$CTLabel_round <- as.numeric(ct.shp$CTLabel_round)*100
+ct.shp$CTLabel_round <- str_pad(ct.shp$CTLabel_round, width=6, pad="0")  
+ct.shp <- transform(ct.shp,BoroCT2020=paste0(BoroCode,CTLabel_round))
+```
+  
+```{r}
+ct_vacant <- ct_vacant %>% group_by(BoroCT2020, vacant_on_12_31) %>% summarize(count_vacant=n()) %>% complete(vacant_on_12_31, fill = list(count_vacant = 0)) %>% mutate(perc_vacant=count_vacant/sum(count_vacant), perc_vacant=round(perc_vacant,2)) %>% filter(vacant_on_12_31=="YES")
+```
+
+```{r}
+ct_vacant.shp <- ct_vacant %>% left_join(ct.shp %>% mutate(BoroCT2020=(as.character(BoroCT2020))), by = c("BoroCT2020")) %>% ungroup() %>% st_as_sf() %>% st_transform('+proj=longlat +datum=WGS84')
+```
+
+```{r}
+# ---- OLD CODE ----
+# ct_vacant_dataset <- read.csv("/Users/nycc/Desktop/vacant_storefronts/census_tract_vacant_2021.csv")
+# 
+# ct_vacant <- ct_vacant_dataset %>% group_by(boro_ct201, vacant_on_12_31) %>% summarize(count_vacant=n()) %>% complete(vacant_on_12_31, fill = list(count_vacant = 0)) %>% mutate(perc_vacant=count_vacant/sum(count_vacant), perc_vacant=round(perc_vacant,2)) %>% left_join(ct.shp %>% mutate(boro_ct201=as.numeric(as.character(boro_ct201))), by = c("boro_ct201"))
+# 
+# ct_vacant.shp <- ct_vacant %>% filter(vacant_on_12_31=="YES") %>% ungroup() %>% st_as_sf() %>% st_transform('+proj=longlat +datum=WGS84')
+```
+
+```{r}
+int_ct <- classInt::classIntervals(ct_vacant.shp$perc_vacant, n = 5, style = 'sd')
+pal = leaflet::colorBin(
+  palette =  c("#800000","#a44736","#c37b6c","#ddafa7","#e5cccc"),
+  domain = ct_vacant.shp$perc_vacant, 
+  na.color = "White", 
+  bins= int_ct$brks,
+  reverse = TRUE
+)
+```
+
+```{r}
+leaflet(ct_vacant.shp, options = leafletOptions(minZoom = 10), height = 500, width =  500) %>%
+  addProviderTiles(provider = "CartoDB.Positron") %>%
+#    addPolygons(data=boro, stroke = T, fill=F, color = "#666666", weight = 1) %>%
+   
+  addPolygons(data = ct.shp %>% mutate(BoroCT2020=(as.character(BoroCT2020))) %>% anti_join(ct_vacant.shp %>% data.frame(), by=c("BoroCT2020")), weight = 1,
+              fillColor = "white",
+              color="grey",
+              stroke = TRUE,
+              fillOpacity = 1) %>% 
+  addPolygons(weight = 1,
+              fillColor = ~pal(perc_vacant),
+              color="grey",
+              stroke = TRUE,
+              fillOpacity = 1) %>%
+  addLegend(position ="topleft", 
+            pal=pal,
+            values = ct_vacant.shp$perc_vacant,
+            title = "Percent vacant",
+            opacity = 1)
+
+```
+
