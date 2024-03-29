@@ -36,7 +36,7 @@ ck3 <- vacant_dataset %>%
   filter(is.na(vacant_dataset$latitude)==T)
 # 
 # vacant_pluto <- ck3 %>% 
-#   select(-c(latitude, longitude)) %>% 
+#   
 #   left_join(pluto, by=c('bbl'))
 
 # there are non-matching bbls, will geocode addresses instead for missing lat/lons
@@ -81,7 +81,7 @@ geosearch_results <- as.data.frame(cbind(bbls, coords)) %>%
 ck3 <- ck3 %>% left_join(geosearch_results, b=c('bbl'='bbls'))
 
 
-# filter out for now
+# filter out for now -------
 vacant_dataset <- vacant_dataset %>%  
   filter(!is.na(vacant_dataset$latitude)==T)  
 
@@ -96,7 +96,6 @@ vacant_ct.shp <- st_join(vacant_dataset_pts.shp,
 vacant_ct <- vacant_ct.shp %>% st_drop_geometry() %>%  as.data.frame() 
 
 
-
 ### CREATE TRACT VACANCY COUNTS DATASET & SHAPEFILE ### ----
 
 # keeping reporting year to make year to year comparisons, see if there have been improvement
@@ -109,6 +108,7 @@ ct_vacant <- vacant_ct %>%
          total_storefronts=sum(count_vacant)) %>% 
   #filter(vacant_on_12_31=="YES") %>% 
   ungroup() %>% as.data.frame()
+
 
 
 # make dataset into shapefile
