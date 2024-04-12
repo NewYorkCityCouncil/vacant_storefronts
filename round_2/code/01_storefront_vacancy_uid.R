@@ -1,12 +1,16 @@
+setwd(here::here('round_2'))
+source('code/00_load_dependencies.R')
+
 # read in storefront vacancy dataset
-vacancy <- vroom::vroom("https://data.cityofnewyork.us/resource/92iy-9c3n.csv?$limit=999999999")
+# vacancy <- vroom::vroom("https://data.cityofnewyork.us/resource/92iy-9c3n.csv?$limit=999999999") # already read in from load dependencies
 
 # create unique storefront bbl id
-v_uniq <- vacancy %>% 
+v_uniq <- vacant_dataset %>% 
+  filter(reporting_year!="2023") %>% 
+  distinct() %>% #remove duplicate rows
   select(-c(sold_date, construction_reported, vacant_6_30_or_date_sold,
             property_street_address_or, borough, borough_block_lot, zip_code, 
             primary_business_activity)) %>% #remove unnecessary & duplicated columns 
-  distinct() %>% #remove duplicate rows
   drop_na(latitude) %>%  # geocode missing lat/long based on bbl later
   #mutate(uid = paste(property_number,property_street)) %>% #create unique id
   mutate(uid2 = paste(bin, bbl))  #create alt unique id
@@ -24,7 +28,7 @@ v_tots <- v_uniq %>%
 
 #checks
 subset <- v_tots %>% filter(n==1) 
-quantile(v_temp_tots$n, seq(0,1,0.1)) # 90%!
+quantile(v_tots$n, seq(0,1,0.1)) # 90%!
 
 #write_csv(v_tots, "round_2/data/output/uid_storefront_vacancy.csv")
 
@@ -36,10 +40,26 @@ v_temporal <- v_uniq %>%
     names_from = reporting_year, names_prefix = 'vacant_',
     values_from = vacant_on_12_31) %>% # make time variables
   unnest(everything()) %>% 
+  distinct() %>% 
   janitor::clean_names() %>% 
   filter(uid2 %in% subset$uid2 == T) %>% # subset to one business per uid reporting period
   # count how many times storefront was vacant
-  mutate(vacant_times = rowSums(
-    across(vacant_2022_and_2023:vacant_2019_and_2020),na.rm = T))
+  mutate(vacant_all_times = rowSums(
+    across(vacant_2022_and_2023:vacant_2019_and_2020),na.rm = T),
+    vacant_prior_20 = rowSums(
+      across(c(vacant_2019_and_2020,vacant_2020_and_2021)),na.rm = T),
+    vacant_prior_21 = rowSums(
+      across(c(vacant_2020_and_2021,vacant_2021_and_2022)),na.rm = T),
+    vacant_prior_22 = rowSums(
+      across(c(vacant_2021_and_2022,vacant_2022_and_2023)),na.rm = T)
+    )
+
+summary(v_temporal$vacant_times)
+table(v_temporal$vacant_prior_20)
+table(v_temporal$vacant_prior_21)
+table(v_temporal$vacant_prior_22)
+
+
+
 
 # linkage time! lets join our datasets
