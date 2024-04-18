@@ -97,7 +97,7 @@ for (i in 1:nrow(district_43)) {
     radius = 2,
     weight = 0,
     fill = TRUE,
-    fillOpacity = 1,
+    fillOpacity = 0.5,
     fillColor = circle_color,
     popup = popup_content
   )
