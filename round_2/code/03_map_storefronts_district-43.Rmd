@@ -15,8 +15,8 @@ library(htmltools)
 
 ```{r}
 # datasets
-council_geographies <- read_csv('data/council_geographies.csv')
-district_43 <- read_csv('data/store_fronts-district_43.csv')
+council_geographies <- read_csv('data/output/council_geographies.csv')
+district_43 <- read_csv('data/output/store_fronts-district_43.csv')
 ```
 
 ```{r}
