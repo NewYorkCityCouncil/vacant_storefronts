@@ -1,0 +1,122 @@
+---
+title: "District 43 Vacancies"
+output: html_document
+date: "2024-04-18"
+---
+
+```{r}
+library(tidyverse)
+library(leaflet)
+library(dplyr)
+library(sf)
+library(htmlwidgets)
+library(htmltools)
+```
+
+```{r}
+# datasets
+council_geographies <- read_csv('data/council_geographies.csv')
+district_43 <- read_csv('data/store_fronts-district_43.csv')
+```
+
+```{r}
+# Taking a look at storefronts in the entire District 43
+
+# Define map specifications
+zoom <- 13
+lat <- 40.620000
+lon <- -74.007500
+
+# Title text
+text <- "Council District 43 Storefronts (2022 and 2023)"
+
+# Create a Leaflet map
+m <- leaflet() %>%
+  setView(lng = lon, lat = lat, zoom = zoom) %>%
+  addTiles(urlTemplate = "https://cartodb-basemaps-{s}.global.ssl.fastly.net/light_all/{z}/{x}/{y}.png", attribution = NULL)
+
+# Define title HTML content
+title_html <- sprintf('<div style="position: absolute; top: 10px; left: 50px; z-index: 1000; font-size: 20px; font-family: Georgia; color: black;"><b>%s</b></div>', text)
+
+# Add title as a control to the map
+m <- htmlwidgets::prependContent(m, HTML(title_html))
+
+# Function to clean GeoJSON string
+clean_geojson_string <- function(geojson_str) {
+  # Remove leading and trailing whitespace
+  cleaned_str <- trimws(geojson_str)
+  
+  return(cleaned_str)
+}
+
+# Add the council boundary lines as layers to the map
+for (i in 1:nrow(council_geographies)) {
+  # Clean up the GeoJSON string
+  cleaned_geojson_str <- clean_geojson_string(council_geographies$the_geom[i])
+  # Convert cleaned GeoJSON string to GeoJSON object
+  geojson <- sf::st_as_sfc(cleaned_geojson_str)
+  # Add GeoJSON object to the map
+  m <- addPolygons(
+    m,
+    data = geojson,
+    color = "#23417D",
+    weight = 2
+  )
+}
+
+# Define popup columns and their aliases
+popup_mapping <- list(
+  borough_block_lot = "BBL",
+  property_street_address_or = "Address",
+  primary_business_activity = "Primary Business Activity",
+  vacant_on_12_31 = "Occupancy Status"
+)
+
+# Function to set color based on condition
+set_circle_color <- function(vacancy_status) {
+  if (vacancy_status == "VACANT") {
+    return("#B63F26")  # Change color for vacant properties
+  } else {
+    return("#1D5FD6")  # Default color for other properties
+  }
+}
+
+# Create markers and add them to the map
+for (i in 1:nrow(district_43)) {
+  circle_color <- set_circle_color(district_43$vacant_on_12_31[i])
+  popup_content <- paste(
+    sapply(names(popup_mapping), function(col) {
+      paste("<b>", popup_mapping[[col]], ":</b> ", district_43[[col]][i], sep = "")
+    }),
+    collapse = "<br>"
+  )
+  m <- addCircleMarkers(
+    m,
+    lng = district_43$longitude[i],
+    lat = district_43$latitude[i],
+    radius = 2,
+    weight = 0,
+    fill = TRUE,
+    fillOpacity = 1,
+    fillColor = circle_color,
+    popup = popup_content
+  )
+}
+
+# Define legend HTML content
+legend_html <- '<div style="font-family: Georgia; font-size: 13pt; position: fixed; bottom: 50px; left: 50px; background-color: white; padding: 10px; border-radius: 5px; z-index: 1000;">
+                    <p><b>Legend</b></p>
+                    <p style="font-size: 10pt;"><svg width="20" height="20"><circle cx="10" cy="10" r="5" fill="#B63F26" opacity="1"/></svg> <span style="font-size: 11pt;">Vacant</span></p>
+                    <p style="font-size: 10pt;"><svg width="20" height="20"><circle cx="10" cy="10" r="5" fill="#1D5FD6" opacity="1"/></svg> <span style="font-size: 11pt;">Occupied</span></p>
+               </div>'
+
+# Add legend as a control to the map
+m <- htmlwidgets::prependContent(m, HTML(legend_html))
+
+# Display the map in a new window
+htmlwidgets::saveWidget(m, "visuals/vacancies_district-43.html", selfcontained = FALSE)
+
+m
+
+```
+
