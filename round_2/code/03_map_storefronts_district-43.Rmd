@@ -66,15 +66,16 @@ for (i in 1:nrow(council_geographies)) {
 
 # Define popup columns and their aliases
 popup_mapping <- list(
-  borough_block_lot = "BBL",
-  property_street_address_or = "Address",
-  primary_business_activity = "Primary Business Activity",
-  vacant_on_12_31 = "Occupancy Status"
+  name = "Name",
+  localizedAddress = "Address",
+  genre = "Genre",
+  primaryTag = "Primary Tag",
+  spaceStatusType = "Status"
 )
 
 # Function to set color based on condition
 set_circle_color <- function(vacancy_status) {
-  if (vacancy_status == "VACANT") {
+  if (vacancy_status == "Yes") {
     return("#B63F26")  # Change color for vacant properties
   } else {
     return("#1D5FD6")  # Default color for other properties
@@ -83,7 +84,7 @@ set_circle_color <- function(vacancy_status) {
 
 # Create markers and add them to the map
 for (i in 1:nrow(district_43)) {
-  circle_color <- set_circle_color(district_43$vacant_on_12_31[i])
+  circle_color <- set_circle_color(district_43$vacant[i])
   popup_content <- paste(
     sapply(names(popup_mapping), function(col) {
       paste("<b>", popup_mapping[[col]], ":</b> ", district_43[[col]][i], sep = "")
